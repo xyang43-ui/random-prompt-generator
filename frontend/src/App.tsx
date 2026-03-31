@@ -1,0 +1,294 @@
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import './App.css';
+
+// --- 数据定义 ---
+const VERBS = ["organize", "deconstruct", "reimagine", "capture", "distort", "sequence", "translate", "mirror", "fragment", "amplify", "mute", "loop", "invert", "layer", "dissolve", "bridge", "anchor", "drift", "pulse", "echo", "trace", "etch", "mold", "stitch", "shatter", "warp", "tint", "carve", "fold", "unfold", "mask", "reveal", "blend", "clash", "float", "sink", "scatter", "gather", "twist", "spin", "balance", "tilt", "cut", "paste", "erase", "mark", "vibrate", "still", "motion", "intersect", "overlap", "synchronize", "isolate", "rotate", "expand", "collapse", "saturate", "desaturate", "expose"];
+const NOUNS = [{ s: "text", p: "texts" }, { s: "sound", p: "sounds" }, { s: "shadow", p: "shadows" }, { s: "memory", p: "memories" }, { s: "rhythm", p: "rhythms" }, { s: "void", p: "voids" }, { s: "color", p: "colors" }, { s: "texture", p: "textures" }, { s: "movement", p: "movements" }, { s: "silence", p: "silences" }, { s: "glitch", p: "glitches" }, { s: "pattern", p: "patterns" }, { s: "dream", p: "dreams" }, { s: "city", p: "cities" }, { s: "face", p: "faces" }, { s: "word", p: "words" }, { s: "line", p: "lines" }, { s: "shape", p: "shapes" }, { s: "breath", p: "breaths" }, { s: "pulse", p: "pulses" }, { s: "reflection", p: "reflections" }, { s: "fragment", p: "fragments" }, { s: "ghost", p: "ghosts" }, { s: "mirror", p: "mirrors" }, { s: "surface", p: "surfaces" }, { s: "depth", p: "depths" }, { s: "limit", p: "limits" }, { s: "flow", p: "flows" }, { s: "friction", p: "frictions" }, { s: "gravity", p: "gravities" }, { s: "time", p: "times" }, { s: "space", p: "spaces" }, { s: "light", p: "lights" }, { s: "dark", p: "darks" }, { s: "noise", p: "noises" }, { s: "signal", p: "signals" }, { s: "body", p: "bodies" }, { s: "skin", p: "skins" }, { s: "bone", p: "bones" }, { s: "liquid", p: "liquids" }, { s: "gas", p: "gases" }, { s: "solid", p: "solids" }, { s: "weight", p: "weights" }, { s: "mass", p: "masses" }, { s: "scale", p: "scales" }, { s: "distance", p: "distances" }, { s: "proximity", p: "proximities" }, { s: "boundary", p: "boundaries" }, { s: "portal", p: "portals" }, { s: "seed", p: "seeds" }, { s: "echo", p: "echoes" }, { s: "trace", p: "traces" }, { s: "spectrum", p: "spectrums" }, { s: "landscape", p: "landscapes" }, { s: "vessel", p: "vessels" }, { s: "horizon", p: "horizons" }, { s: "structure", p: "structures" }, { s: "sequence", p: "sequences" }, { s: "wave", p: "waves" }, { s: "field", p: "fields" }];
+const FONTS = ["'Inter', sans-serif", "'Space Mono', monospace", "'Playfair Display', serif", "'Courier New', Courier, monospace", "Georgia, serif", "Impact, Charcoal, sans-serif", "'Times New Roman', Times, serif", "Arial, Helvetica, sans-serif", "Verdana, Geneva, sans-serif", "Monaco, monospace", "'Garamond', serif", "'Futura', sans-serif", "'Rockwell', serif"];
+const BGM_FILES = ["calm-rhodes-piano-smooth.mp3", "cat-meditation.mp3", "cornfield.mp3", "crackling-fire.mp3", "ocean-waves.mp3", "podcast-lo-fi.mp3", "quietphase-ambient-zen.mp3", "rain-lofi.mp3", "rain-whisper-calm-ambient.mp3", "sad-lo-fi.mp3", "serene-reflections-piano.mp3", "shadows-in-the-haze-piano.mp3", "white-noise.mp3", "zen-oasis.mp3"];
+
+const Visualizer: React.FC<{ analyzer: AnalyserNode | null, isPlaying: boolean }> = ({ analyzer, isPlaying }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!analyzer || !canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d')!;
+    const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+    let animationFrameId: number;
+    const render = () => {
+      ctx.clearRect(0, 0, 32, 12); if (isPlaying) analyzer.getByteFrequencyData(dataArray);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      for (let i = 0; i < 8; i++) { const h = (dataArray[i * 2] / 255) * 12; ctx.fillRect(i * 4, 12 - h, 2, h); }
+      animationFrameId = requestAnimationFrame(render);
+    };
+    render(); return () => cancelAnimationFrame(animationFrameId);
+  }, [analyzer, isPlaying]);
+  return <canvas ref={canvasRef} width={32} height={12} className="visualizer-canvas" />;
+};
+
+const InteractiveLine: React.FC<{ text: string, font: string, mousePos: { x: number, y: number }, isHolding: boolean, progress: number }> = ({ text, font, mousePos, isHolding, progress }) => {
+  const lineRef = useRef<HTMLDivElement>(null);
+  const [transform, setTransform] = useState({ x: 0, y: 0, skew: 0, blur: 0 });
+  const letterSpacings = useMemo(() => text.split('').map(() => (Math.random() * 0.3 - 0.05) + 'em'), [text]);
+  useEffect(() => {
+    let animationFrameId: number;
+    const update = () => {
+      if (!lineRef.current) return;
+      const rect = lineRef.current.getBoundingClientRect();
+      const dx = mousePos.x - (rect.left + rect.width / 2); const dy = mousePos.y - (rect.top + rect.height / 2);
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance < 450) { const force = (1 - distance / 450); setTransform({ x: -(dx / distance) * (isHolding ? force * 40 : force * 20), y: -(dy / distance) * (isHolding ? force * 40 : force * 20), skew: (dx / 450) * 15, blur: isHolding ? force * 5 : force * 2 }); }
+      else { setTransform(prev => ({ x: prev.x * 0.92, y: prev.y * 0.92, skew: prev.skew * 0.92, blur: prev.blur * 0.92 })); }
+      animationFrameId = requestAnimationFrame(update);
+    };
+    update(); return () => cancelAnimationFrame(animationFrameId);
+  }, [mousePos, isHolding]);
+  return (
+    <div ref={lineRef} className={`line glitch-text ${isHolding ? 'is-holding' : ''}`} data-text={text} style={{ fontFamily: font, transform: `translate(${transform.x}px, ${transform.y}px) skewX(${transform.skew}deg)`, filter: `blur(${transform.blur}px)` }}>
+      {text.split('').map((char, i) => (<span key={i} style={{ marginRight: letterSpacings[i], display: 'inline-block' }}>{char === ' ' ? '\u00A0' : char}</span>))}
+    </div>
+  );
+};
+
+const InteractiveBackground: React.FC<{ isHolding: boolean; progress: number; mousePos: { x: number; y: number } }> = ({ isHolding, progress, mousePos }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    let particles: Array<any> = [];
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    window.addEventListener('resize', resize); resize();
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const gradient = ctx.createRadialGradient(mousePos.x, mousePos.y, 0, mousePos.x, mousePos.y, isHolding ? 250 + progress * 8 : 250);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${isHolding ? 0.08 + progress / 500 : 0.05})`);
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (Math.random() > 0.4) particles.push({ x: mousePos.x, y: mousePos.y, vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.5) * 5, size: Math.random() * 3, life: 1.0 });
+      particles = particles.filter(p => p.life > 0);
+      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.015; ctx.fillStyle = `rgba(255, 255, 255, ${p.life * 0.3})`; ctx.fillRect(p.x, p.y, p.size, p.size); });
+      requestAnimationFrame(render);
+    };
+    render(); return () => window.removeEventListener('resize', resize);
+  }, [isHolding, progress, mousePos]);
+  return <canvas ref={canvasRef} className="interactive-bg" />;
+};
+
+const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h: boolean) => void, progress: number, setProgress: any }> = ({ onNavigate, setIsHolding, progress, setProgress }) => {
+  const [hoveredSide, setHoveredSide] = useState<string | null>(null);
+  const activeHoldSide = useRef<string | null>(null);
+
+  const sideStyles = {
+    left: { font: "Gotham, 'Helvetica Neue', Helvetica, Arial, sans-serif", pathLen: 179 },
+    right: { font: "'Futura', sans-serif", pathLen: 179 },
+    bottom: { font: "'Agency FB', sans-serif", pathLen: 160 }
+  };
+
+  useEffect(() => {
+    let interval: number | undefined;
+    if (activeHoldSide.current) {
+      interval = window.setInterval(() => {
+        setProgress((prev: number) => {
+          if (prev >= 100) { 
+            onNavigate(activeHoldSide.current === 'left' ? 'archive_random' : activeHoldSide.current === 'right' ? 'archive_about' : 'archive_nature'); 
+            setIsHolding(false); 
+            activeHoldSide.current = null; 
+            return 0; 
+          }
+          return prev + 2.5;
+        });
+      }, 20);
+    }
+    return () => clearInterval(interval);
+  }, [activeHoldSide.current, onNavigate, setIsHolding, setProgress]);
+
+  const startHold = (side: string) => { activeHoldSide.current = side; setIsHolding(true); };
+  const stopHold = () => { activeHoldSide.current = null; setIsHolding(false); setProgress(0); };
+
+  const diffusionScales = [1.2, 1.5, 2.1, 2.8, 4.0, 5.8, 8.5];
+
+  return (
+    <div className="archive-nav-container">
+      <svg viewBox="0 0 400 400" className="triangle-svg">
+        <defs>
+          {/* Paths for text alignment - placed slightly outside the triangle edges */}
+          {/* Left: RANDOM PROMPT - Slightly reduced spacing */}
+          <path id="path-left-1" d="M 110 285 L 190 125" />
+          <path id="path-left-2" d="M 80 270 L 160 110" />
+          
+          {/* Right: PROMPT ABOUT RANDOMNESS - Slightly reduced spacing */}
+          <path id="path-right-1" d="M 210 125 L 290 285" />
+          <path id="path-right-2" d="M 240 110 L 320 270" />
+          
+          <path id="path-bottom-1" d="M 120 300 L 280 300" />
+          <path id="path-bottom-2" d="M 120 335 L 280 335" />
+        </defs>
+        
+        {/* Diffusion Background Triangles - Calculated from center (200, 226.67) */}
+        {diffusionScales.map((s, i) => {
+          const ty = 226.67 - 106.67 * s;
+          const rx = 200 + 80 * s;
+          const ry = 226.67 + 53.33 * s;
+          const lx = 200 - 80 * s;
+          const ly = 226.67 + 53.33 * s;
+          return (
+            <polygon 
+              key={i}
+              points={`${200},${ty} ${rx},${ry} ${lx},${ly}`} 
+              className="triangle-wire-bg" 
+              style={{ opacity: Math.max(0.01, 0.15 / (s * 0.8)) }}
+            />
+          );
+        })}
+        
+        <polygon points="200,120 280,280 120,280" className="triangle-wire" />
+        
+        {/* Progress Edges */}
+        <line x1="120" y1="280" x2="200" y2="120" className="triangle-edge-base" />
+        <line x1="200" y1="120" x2="280" y2="280" className="triangle-edge-base" />
+        <line x1="120" y1="280" x2="280" y2="280" className="triangle-edge-base" />
+
+        <line x1="120" y1="280" x2="200" y2="120" className="triangle-edge-progress" 
+              style={{ strokeDasharray: 179, strokeDashoffset: activeHoldSide.current === 'left' ? 179 - (179 * progress / 100) : 179, opacity: activeHoldSide.current === 'left' ? 1 : 0 }} />
+        <line x1="200" y1="120" x2="280" y2="280" className="triangle-edge-progress" 
+              style={{ strokeDasharray: 179, strokeDashoffset: activeHoldSide.current === 'right' ? 179 - (179 * progress / 100) : 179, opacity: activeHoldSide.current === 'right' ? 1 : 0 }} />
+        <line x1="120" y1="280" x2="280" y2="280" className="triangle-edge-progress" 
+              style={{ strokeDasharray: 160, strokeDashoffset: activeHoldSide.current === 'bottom' ? 160 - (160 * progress / 100) : 160, opacity: activeHoldSide.current === 'bottom' ? 1 : 0 }} />
+
+        {/* Left: RANDOM PROMPT */}
+        <g className={`archive-label label-left ${hoveredSide === 'left' || activeHoldSide.current === 'left' ? 'active' : ''}`} 
+           onMouseEnter={() => setHoveredSide('left')} onMouseLeave={() => setHoveredSide(null)} 
+           onMouseDown={() => startHold('left')} onMouseUp={stopHold} onTouchStart={() => startHold('left')} onTouchEnd={stopHold}>
+          <text style={{ fontFamily: sideStyles.left.font }}>
+            <textPath xlinkHref="#path-left-2" textLength="179" lengthAdjust="spacingAndGlyphs">RANDOM</textPath>
+            <textPath xlinkHref="#path-left-1" textLength="179" lengthAdjust="spacingAndGlyphs">PROMPT</textPath>
+          </text>
+          <rect x="20" y="100" width="180" height="260" fill="transparent" style={{ cursor: 'pointer' }} transform="rotate(-63, 110, 230)" />
+        </g>
+
+        {/* Right: PROMPT ABOUT RANDOMNESS */}
+        <g className={`archive-label label-right ${hoveredSide === 'right' || activeHoldSide.current === 'right' ? 'active' : ''}`} 
+           onMouseEnter={() => setHoveredSide('right')} onMouseLeave={() => setHoveredSide(null)} 
+           onMouseDown={() => startHold('right')} onMouseUp={stopHold} onTouchStart={() => startHold('right')} onTouchEnd={stopHold}>
+          <text style={{ fontFamily: sideStyles.right.font, fontWeight: 100 }}>
+            <textPath xlinkHref="#path-right-2" textLength="179" lengthAdjust="spacingAndGlyphs">PROMPT ABOUT</textPath>
+            <textPath xlinkHref="#path-right-1" textLength="179" lengthAdjust="spacingAndGlyphs">RANDOMNESS</textPath>
+          </text>
+          <rect x="200" y="100" width="180" height="260" fill="transparent" style={{ cursor: 'pointer' }} transform="rotate(63, 290, 230)" />
+        </g>
+
+        {/* Bottom: RANDOMNESS IN NATURE */}
+        <g className={`archive-label label-bottom ${hoveredSide === 'bottom' || activeHoldSide.current === 'bottom' ? 'active' : ''}`} 
+           onMouseEnter={() => setHoveredSide('bottom')} onMouseLeave={() => setHoveredSide(null)} 
+           onMouseDown={() => startHold('bottom')} onMouseUp={stopHold} onTouchStart={() => startHold('bottom')} onTouchEnd={stopHold}>
+          <text style={{ fontFamily: sideStyles.bottom.font }}>
+            <textPath xlinkHref="#path-bottom-1" textLength="160" lengthAdjust="spacingAndGlyphs">RANDOMNESS</textPath>
+            <textPath xlinkHref="#path-bottom-2" textLength="160" lengthAdjust="spacingAndGlyphs">IN NATURE</textPath>
+          </text>
+          <rect x="110" y="290" width="180" height="120" fill="transparent" style={{ cursor: 'pointer' }} />
+        </g>
+      </svg>
+    </div>
+  );
+};
+
+function App() {
+  type ViewState = "home" | "archive" | "archive_random" | "archive_about" | "archive_nature";
+  const [view, setView] = useState<ViewState>("home");
+  const [verb, setVerb] = useState("click &"); const [article, setArticle] = useState(""); const [noun, setNoun] = useState("hold");
+  const [isPlural, setIsPlural] = useState(true); const [verbFont, setVerbFont] = useState(FONTS[0]); const [articleFont, setArticleFont] = useState(FONTS[0]); const [nounFont, setNounFont] = useState(FONTS[0]);
+  const [isHolding, setIsHolding] = useState(false); const [progress, setProgress] = useState(0); const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [isMusicPanelOpen, setIsMusicPanelOpen] = useState(false); const [currentTrack, setCurrentTrack] = useState<string | null>(null);
+  const [volume, setVolume] = useState(0.5); const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null); const audioCtxRef = useRef<AudioContext | null>(null); const analyzerRef = useRef<AnalyserNode | null>(null);
+
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContext(); const analyzer = ctx.createAnalyser(); analyzer.fftSize = 64;
+      const source = ctx.createMediaElementSource(audioRef.current!); source.connect(analyzer); analyzer.connect(ctx.destination);
+      audioCtxRef.current = ctx; analyzerRef.current = analyzer;
+    }
+    if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+  };
+
+  const handleTrackChange = (track: string | null) => {
+    initAudio(); if (!track) { audioRef.current?.pause(); setIsPlaying(false); setCurrentTrack(null); return; }
+    setCurrentTrack(track); setIsPlaying(true); setTimeout(() => { if (audioRef.current) audioRef.current.play(); }, 0);
+  };
+
+  const generateRandomPrompt = useCallback(() => {
+    const v = VERBS[Math.floor(Math.random() * VERBS.length)]; const nObj = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+    const plural = Math.random() > 0.5; setVerb(v); setIsPlural(plural); setVerbFont(FONTS[Math.floor(Math.random() * FONTS.length)]); setArticleFont(FONTS[Math.floor(Math.random() * FONTS.length)]); setNounFont(FONTS[Math.floor(Math.random() * FONTS.length)]);
+    if (plural) setNoun(nObj.p); else { setNoun(nObj.s); setArticle(['a','e','i','o','u'].includes(nObj.s[0].toLowerCase()) ? 'an' : 'a'); }
+  }, []);
+
+  useEffect(() => {
+    let interval: number | undefined;
+    if (isHolding && view === "home") {
+      interval = window.setInterval(() => {
+        setProgress((prev: number) => { if (prev >= 100) { generateRandomPrompt(); setIsHolding(false); return 0; } return prev + 2; });
+      }, 20);
+    } else if (!isHolding && view === "home") setProgress(0);
+    return () => clearInterval(interval);
+  }, [isHolding, generateRandomPrompt, view]);
+
+  return (
+    <div className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} onMouseDown={(e) => { setMousePos({ x: e.clientX, y: e.clientY }); if(view==="home") setIsHolding(true); initAudio(); }} onMouseUp={() => setIsHolding(false)} onMouseLeave={() => setIsHolding(false)} onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} onTouchStart={(e) => { setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); if(view==="home") setIsHolding(true); initAudio(); }} onTouchEnd={() => setIsHolding(false)} onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}>
+      <audio ref={audioRef} src={currentTrack ? `/bgm/${currentTrack}` : undefined} loop />
+      <InteractiveBackground isHolding={isHolding} progress={progress} mousePos={mousePos} />
+      <div className="vignette"></div>
+      <div className="top-nav">
+        {view === "home" && (
+          <div className="mini-audio-controls">
+            <button className="track-btn" onClick={(e) => { e.stopPropagation(); const idx = currentTrack ? BGM_FILES.indexOf(currentTrack) : 0; handleTrackChange(BGM_FILES[(idx - 1 + BGM_FILES.length) % BGM_FILES.length]); }}>‹</button>
+            <Visualizer analyzer={analyzerRef.current} isPlaying={isPlaying} />
+            <button className="track-btn" onClick={(e) => { e.stopPropagation(); const idx = currentTrack ? BGM_FILES.indexOf(currentTrack) : -1; handleTrackChange(BGM_FILES[(idx + 1) % BGM_FILES.length]); }}>›</button>
+          </div>
+        )}
+        <button className="music-toggle-btn" onClick={(e) => { e.stopPropagation(); setIsMusicPanelOpen(!isMusicPanelOpen); }}>MUSIC</button>
+      </div>
+      <div className={`music-panel ${isMusicPanelOpen ? 'open' : ''}`}>
+        <div className="music-panel-content">
+          <header><h3>BGM SELECT</h3><button className="close-panel-btn" onClick={() => setIsMusicPanelOpen(false)}>×</button></header>
+          <div className="volume-control"><span>VOLUME</span><input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} /></div>
+          <ul className="track-list">
+            <li className={currentTrack === null ? 'active' : ''} onClick={() => handleTrackChange(null)}>MUTE / OFF</li>
+            {BGM_FILES.map(file => (<li key={file} className={currentTrack === file ? 'active' : ''} onClick={() => handleTrackChange(file)}>{file.replace('.mp3', '').replace(/-/g, ' ')}</li>))}
+          </ul>
+        </div>
+      </div>
+      <main className="main-content">
+        {view === "home" ? (
+          <div className="prompt-wrapper">
+            <h1 className={`prompt-display ${isHolding ? 'holding' : ''} ${isPlural ? 'plural' : 'singular'}`}>
+              <InteractiveLine text={verb} font={verbFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
+              {!isPlural && <InteractiveLine text={article} font={articleFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />}
+              <InteractiveLine text={noun} font={nounFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
+            </h1>
+          </div>
+        ) : view === "archive" ? (
+          <ArchiveTriangle onNavigate={setView} setIsHolding={setIsHolding} progress={progress} setProgress={setProgress} />
+        ) : (
+          <div className="sub-archive-view">
+            <button className="back-btn" onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
+            <h2 className="placeholder-title">{view.replace('archive_', '').toUpperCase().replace('_', ' ')}</h2>
+          </div>
+        )}
+      </main>
+      <div className="ui-overlay">
+        {view === "home" && <div className="progress-bar-container"><div className="progress-bar" style={{ width: `${progress}%` }}></div></div>}
+        <div className="footer-info">
+          <nav className="nav-links">
+            <button className={`nav-btn ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>HOME</button>
+            <span className="nav-separator">/</span>
+            <button className={`nav-btn ${view.startsWith('archive') ? 'active' : ''}`} onClick={() => setView('archive')}>ARCHIVE</button>
+          </nav>
+          <div className="footer-right"><span>RANDOM PROMPT GENERATOR</span>{view === "home" && <div className="hold-hint-group"><span>HOLD TO GENERATE</span></div>}</div>
+        </div>
+      </div>
+      <div className="bg-elements"><div className={`scanline ${isHolding ? 'active' : ''}`}></div></div>
+    </div>
+  );
+}
+
+export default App;
