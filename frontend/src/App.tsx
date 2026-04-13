@@ -2,9 +2,17 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import './App.css';
 
 // --- 数据定义 ---
+interface Prompt {
+  id: number;
+  prompt_text: string;
+  media_url: string;
+  media_type: string;
+}
+
 const VERBS = ["organize", "deconstruct", "reimagine", "capture", "distort", "sequence", "translate", "mirror", "fragment", "amplify", "mute", "loop", "invert", "layer", "dissolve", "bridge", "anchor", "drift", "pulse", "echo", "trace", "etch", "mold", "stitch", "shatter", "warp", "tint", "carve", "fold", "unfold", "mask", "reveal", "blend", "clash", "float", "sink", "scatter", "gather", "twist", "spin", "balance", "tilt", "cut", "paste", "erase", "mark", "vibrate", "still", "motion", "intersect", "overlap", "synchronize", "isolate", "rotate", "expand", "collapse", "saturate", "desaturate", "expose"];
 const NOUNS = [{ s: "text", p: "texts" }, { s: "sound", p: "sounds" }, { s: "shadow", p: "shadows" }, { s: "memory", p: "memories" }, { s: "rhythm", p: "rhythms" }, { s: "void", p: "voids" }, { s: "color", p: "colors" }, { s: "texture", p: "textures" }, { s: "movement", p: "movements" }, { s: "silence", p: "silences" }, { s: "glitch", p: "glitches" }, { s: "pattern", p: "patterns" }, { s: "dream", p: "dreams" }, { s: "city", p: "cities" }, { s: "face", p: "faces" }, { s: "word", p: "words" }, { s: "line", p: "lines" }, { s: "shape", p: "shapes" }, { s: "breath", p: "breaths" }, { s: "pulse", p: "pulses" }, { s: "reflection", p: "reflections" }, { s: "fragment", p: "fragments" }, { s: "ghost", p: "ghosts" }, { s: "mirror", p: "mirrors" }, { s: "surface", p: "surfaces" }, { s: "depth", p: "depths" }, { s: "limit", p: "limits" }, { s: "flow", p: "flows" }, { s: "friction", p: "frictions" }, { s: "gravity", p: "gravities" }, { s: "time", p: "times" }, { s: "space", p: "spaces" }, { s: "light", p: "lights" }, { s: "dark", p: "darks" }, { s: "noise", p: "noises" }, { s: "signal", p: "signals" }, { s: "body", p: "bodies" }, { s: "skin", p: "skins" }, { s: "bone", p: "bones" }, { s: "liquid", p: "liquids" }, { s: "gas", p: "gases" }, { s: "solid", p: "solids" }, { s: "weight", p: "weights" }, { s: "mass", p: "masses" }, { s: "scale", p: "scales" }, { s: "distance", p: "distances" }, { s: "proximity", p: "proximities" }, { s: "boundary", p: "boundaries" }, { s: "portal", p: "portals" }, { s: "seed", p: "seeds" }, { s: "echo", p: "echoes" }, { s: "trace", p: "traces" }, { s: "spectrum", p: "spectrums" }, { s: "landscape", p: "landscapes" }, { s: "vessel", p: "vessels" }, { s: "horizon", p: "horizons" }, { s: "structure", p: "structures" }, { s: "sequence", p: "sequences" }, { s: "wave", p: "waves" }, { s: "field", p: "fields" }];
 const FONTS = ["'Inter', sans-serif", "'Space Mono', monospace", "'Playfair Display', serif", "'Courier New', Courier, monospace", "Georgia, serif", "Impact, Charcoal, sans-serif", "'Times New Roman', Times, serif", "Arial, Helvetica, sans-serif", "Verdana, Geneva, sans-serif", "Monaco, monospace", "'Garamond', serif", "'Futura', sans-serif", "'Rockwell', serif"];
+const ABOUT_FONTS = ["'Playfair Display', serif", "'Space Mono', monospace", "Impact, Charcoal, sans-serif"];
 const BGM_FILES = ["calm-rhodes-piano-smooth.mp3", "cat-meditation.mp3", "cornfield.mp3", "crackling-fire.mp3", "ocean-waves.mp3", "podcast-lo-fi.mp3", "quietphase-ambient-zen.mp3", "rain-lofi.mp3", "rain-whisper-calm-ambient.mp3", "sad-lo-fi.mp3", "serene-reflections-piano.mp3", "shadows-in-the-haze-piano.mp3", "white-noise.mp3", "zen-oasis.mp3"];
 
 const Visualizer: React.FC<{ analyzer: AnalyserNode | null, isPlaying: boolean }> = ({ analyzer, isPlaying }) => {
@@ -110,20 +118,14 @@ const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h
     <div className="archive-nav-container">
       <svg viewBox="0 0 400 400" className="triangle-svg">
         <defs>
-          {/* Paths for text alignment - placed slightly outside the triangle edges */}
-          {/* Left: RANDOM PROMPT - Slightly reduced spacing */}
           <path id="path-left-1" d="M 110 285 L 190 125" />
           <path id="path-left-2" d="M 80 270 L 160 110" />
-          
-          {/* Right: PROMPT ABOUT RANDOMNESS - Slightly reduced spacing */}
           <path id="path-right-1" d="M 210 125 L 290 285" />
           <path id="path-right-2" d="M 240 110 L 320 270" />
-          
           <path id="path-bottom-1" d="M 120 300 L 280 300" />
           <path id="path-bottom-2" d="M 120 335 L 280 335" />
         </defs>
         
-        {/* Diffusion Background Triangles - Calculated from center (200, 226.67) */}
         {diffusionScales.map((s, i) => {
           const ty = 226.67 - 106.67 * s;
           const rx = 200 + 80 * s;
@@ -142,7 +144,6 @@ const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h
         
         <polygon points="200,120 280,280 120,280" className="triangle-wire" />
         
-        {/* Progress Edges */}
         <line x1="120" y1="280" x2="200" y2="120" className="triangle-edge-base" />
         <line x1="200" y1="120" x2="280" y2="280" className="triangle-edge-base" />
         <line x1="120" y1="280" x2="280" y2="280" className="triangle-edge-base" />
@@ -154,7 +155,6 @@ const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h
         <line x1="120" y1="280" x2="280" y2="280" className="triangle-edge-progress" 
               style={{ strokeDasharray: 160, strokeDashoffset: activeHoldSide.current === 'bottom' ? 160 - (160 * progress / 100) : 160, opacity: activeHoldSide.current === 'bottom' ? 1 : 0 }} />
 
-        {/* Left: RANDOM PROMPT */}
         <g className={`archive-label label-left ${hoveredSide === 'left' || activeHoldSide.current === 'left' ? 'active' : ''}`} 
            onMouseEnter={() => setHoveredSide('left')} onMouseLeave={() => setHoveredSide(null)} 
            onMouseDown={() => startHold('left')} onMouseUp={stopHold} onTouchStart={() => startHold('left')} onTouchEnd={stopHold}>
@@ -165,7 +165,6 @@ const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h
           <rect x="20" y="100" width="180" height="260" fill="transparent" style={{ cursor: 'pointer' }} transform="rotate(-63, 110, 230)" />
         </g>
 
-        {/* Right: PROMPT ABOUT RANDOMNESS */}
         <g className={`archive-label label-right ${hoveredSide === 'right' || activeHoldSide.current === 'right' ? 'active' : ''}`} 
            onMouseEnter={() => setHoveredSide('right')} onMouseLeave={() => setHoveredSide(null)} 
            onMouseDown={() => startHold('right')} onMouseUp={stopHold} onTouchStart={() => startHold('right')} onTouchEnd={stopHold}>
@@ -176,7 +175,6 @@ const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h
           <rect x="200" y="100" width="180" height="260" fill="transparent" style={{ cursor: 'pointer' }} transform="rotate(63, 290, 230)" />
         </g>
 
-        {/* Bottom: RANDOMNESS IN NATURE */}
         <g className={`archive-label label-bottom ${hoveredSide === 'bottom' || activeHoldSide.current === 'bottom' ? 'active' : ''}`} 
            onMouseEnter={() => setHoveredSide('bottom')} onMouseLeave={() => setHoveredSide(null)} 
            onMouseDown={() => startHold('bottom')} onMouseUp={stopHold} onTouchStart={() => startHold('bottom')} onTouchEnd={stopHold}>
@@ -191,6 +189,178 @@ const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h
   );
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+const FloatingPrompt: React.FC<{ text: string; onClick: () => void }> = ({ text, onClick }) => {
+  const [pos, setPos] = useState({ x: Math.random() * (window.innerWidth - 200), y: Math.random() * (window.innerHeight - 100) });
+  const [vel] = useState({ x: (Math.random() - 0.5) * 1.5, y: (Math.random() - 0.5) * 1.5 });
+  const font = useMemo(() => FONTS[Math.floor(Math.random() * FONTS.length)], []);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    const update = () => {
+      setPos(prev => {
+        let nextX = prev.x + vel.x;
+        let nextY = prev.y + vel.y;
+        if (nextX <= 0 || nextX >= window.innerWidth - 200) vel.x *= -1;
+        if (nextY <= 0 || nextY >= window.innerHeight - 100) vel.y *= -1;
+        return { x: nextX, y: nextY };
+      });
+      animationFrameId = requestAnimationFrame(update);
+    };
+    update();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [vel]);
+
+  return (
+    <div 
+      className="floating-prompt" 
+      style={{ left: `${pos.x}px`, top: `${pos.y}px`, fontFamily: font }}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+    >
+      {text}
+    </div>
+  );
+};
+
+const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+
+  const fetchPrompts = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/prompts');
+      const data = await response.json();
+      setPrompts(data);
+    } catch (err) {
+      console.error("Failed to fetch prompts:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPrompts();
+  }, [fetchPrompts]);
+
+  return (
+    <div className="sub-archive-view archive-floating-container">
+      <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px', margin: 0 }} onClick={onBack}>BACK TO HOME</button>
+      <button className="upload-btn-trigger" onClick={() => setIsUploadOpen(true)}>UPLOAD</button>
+      
+      {prompts.length === 0 ? (
+        <FloatingPrompt text="explain randomness" onClick={() => setSelectedPrompt({ id: 0, prompt_text: "explain randomness", media_url: "", media_type: "placeholder" })} />
+      ) : (
+        prompts.map(p => (
+          <FloatingPrompt key={p.id} text={p.prompt_text} onClick={() => setSelectedPrompt(p)} />
+        ))
+      )}
+
+      {selectedPrompt && (
+        <div className="modal-overlay" onClick={() => setSelectedPrompt(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-prompt-title">{selectedPrompt.prompt_text}</div>
+            <div className="modal-media-container">
+              {selectedPrompt.media_type === 'image' && <img src={selectedPrompt.media_url} alt={selectedPrompt.prompt_text} className="modal-media" />}
+              {selectedPrompt.media_type === 'video' && <video src={selectedPrompt.media_url} controls className="modal-media" />}
+              {selectedPrompt.media_type === 'audio' && (
+                <div className="audio-display">
+                  <div className="modal-placeholder-icon">♬</div>
+                  <audio src={selectedPrompt.media_url} controls />
+                </div>
+              )}
+              {selectedPrompt.media_type === 'placeholder' && (
+                <div className="modal-placeholder">
+                  <div className="modal-placeholder-icon">⠿</div>
+                  <div className="modal-placeholder-text">MEDIA CONTENT PLACEHOLDER</div>
+                </div>
+              )}
+            </div>
+            <div className="modal-placeholder-text" style={{ fontSize: '0.6rem', marginTop: '20px' }}>CLICK OUTSIDE TO RETURN</div>
+          </div>
+        </div>
+      )}
+
+      {isUploadOpen && (
+        <UploadModal 
+          onClose={() => setIsUploadOpen(false)} 
+          onSuccess={() => {
+            setIsUploadOpen(false);
+            fetchPrompts();
+          }} 
+        />
+      )}
+    </div>
+  );
+};
+
+const UploadModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
+  const [promptText, setPromptText] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promptText || !file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('prompt_text', promptText);
+    formData.append('media', file);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/prompts', {
+        method: 'POST',
+        body: formData,
+      });
+      if (response.ok) {
+        onSuccess();
+      } else {
+        alert("Upload failed");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Upload error");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content upload-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-prompt-title">SUBMIT RESPONSE</div>
+        <form onSubmit={handleSubmit} className="upload-form">
+          <div className="form-group">
+            <label>PROMPT TEXT</label>
+            <input 
+              type="text" 
+              value={promptText} 
+              onChange={(e) => setPromptText(e.target.value)} 
+              placeholder="What is this response to?"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>MEDIA FILE (IMG/VID/AUD)</label>
+            <input 
+              type="file" 
+              accept="image/*,video/*,audio/*" 
+              onChange={(e) => setFile(e.target.files?.[0] || null)} 
+              required
+            />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>CANCEL</button>
+            <button type="submit" className="submit-btn" disabled={isUploading}>
+              {isUploading ? 'UPLOADING...' : 'SUBMIT'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   type ViewState = "home" | "archive" | "archive_random" | "archive_about" | "archive_nature";
   const [view, setView] = useState<ViewState>("home");
@@ -200,6 +370,8 @@ function App() {
   const [isMusicPanelOpen, setIsMusicPanelOpen] = useState(false); const [currentTrack, setCurrentTrack] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.5); const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null); const audioCtxRef = useRef<AudioContext | null>(null); const analyzerRef = useRef<AnalyserNode | null>(null);
+
+  const [aboutPromptIndex, setAboutPromptIndex] = useState(0);
 
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -222,18 +394,32 @@ function App() {
     if (plural) setNoun(nObj.p); else { setNoun(nObj.s); setArticle(['a','e','i','o','u'].includes(nObj.s[0].toLowerCase()) ? 'an' : 'a'); }
   }, []);
 
+  const generateAboutPrompt = useCallback(() => {
+    setAboutPromptIndex(prev => (prev + 1) % ABOUT_FONTS.length);
+  }, []);
+
   useEffect(() => {
     let interval: number | undefined;
-    if (isHolding && view === "home") {
-      interval = window.setInterval(() => {
-        setProgress((prev: number) => { if (prev >= 100) { generateRandomPrompt(); setIsHolding(false); return 0; } return prev + 2; });
-      }, 20);
-    } else if (!isHolding && view === "home") setProgress(0);
+    if (isHolding) {
+      if (view === "home" || view === "archive_about") {
+        interval = window.setInterval(() => {
+          setProgress((prev: number) => { 
+            if (prev >= 100) { 
+              if (view === "home") generateRandomPrompt();
+              else generateAboutPrompt();
+              setIsHolding(false); 
+              return 0; 
+            } 
+            return prev + 2; 
+          });
+        }, 20);
+      }
+    } else if (!isHolding) setProgress(0);
     return () => clearInterval(interval);
-  }, [isHolding, generateRandomPrompt, view]);
+  }, [isHolding, generateRandomPrompt, generateAboutPrompt, view]);
 
   return (
-    <div className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} onMouseDown={(e) => { setMousePos({ x: e.clientX, y: e.clientY }); if(view==="home") setIsHolding(true); initAudio(); }} onMouseUp={() => setIsHolding(false)} onMouseLeave={() => setIsHolding(false)} onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} onTouchStart={(e) => { setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); if(view==="home") setIsHolding(true); initAudio(); }} onTouchEnd={() => setIsHolding(false)} onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}>
+    <div className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} onMouseDown={(e) => { setMousePos({ x: e.clientX, y: e.clientY }); if(view==="home" || view==="archive_about") setIsHolding(true); initAudio(); }} onMouseUp={() => setIsHolding(false)} onMouseLeave={() => setIsHolding(false)} onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} onTouchStart={(e) => { setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); if(view==="home" || view==="archive_about") setIsHolding(true); initAudio(); }} onTouchEnd={() => setIsHolding(false)} onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}>
       <audio ref={audioRef} src={currentTrack ? `/bgm/${currentTrack}` : undefined} loop />
       <InteractiveBackground isHolding={isHolding} progress={progress} mousePos={mousePos} />
       <div className="vignette"></div>
@@ -258,7 +444,7 @@ function App() {
         </div>
       </div>
       <main className="main-content">
-        {view === "home" ? (
+        {view === "home" && (
           <div className="prompt-wrapper">
             <h1 className={`prompt-display ${isHolding ? 'holding' : ''} ${isPlural ? 'plural' : 'singular'}`}>
               <InteractiveLine text={verb} font={verbFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
@@ -266,24 +452,50 @@ function App() {
               <InteractiveLine text={noun} font={nounFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
             </h1>
           </div>
-        ) : view === "archive" ? (
-          <ArchiveTriangle onNavigate={setView} setIsHolding={setIsHolding} progress={progress} setProgress={setProgress} />
-        ) : (
-          <div className="sub-archive-view">
-            <button className="back-btn" onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
-            <h2 className="placeholder-title">{view.replace('archive_', '').toUpperCase().replace('_', ' ')}</h2>
-          </div>
         )}
       </main>
+
+      {/* Archive and Sub-views (Rendered outside main-content to avoid transform centering) */}
+      {view === "archive" && (
+        <ArchiveFloatingView onBack={() => setView('home')} />
+      )}
+      {view === "archive_random" && (
+        <ArchiveFloatingView onBack={() => setView('archive')} />
+      )}
+      {view === "archive_about" && (
+        <div className="sub-archive-view about-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 998 }}>
+          <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px' }} onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
+          <div className="prompt-wrapper" style={{ marginTop: '50vh', transform: 'translateY(-50%)' }}>
+            <h1 className={`prompt-display ${isHolding ? 'holding' : ''}`}>
+              <InteractiveLine text="explain randomness" font={ABOUT_FONTS[aboutPromptIndex]} mousePos={mousePos} isHolding={isHolding} progress={progress} />
+            </h1>
+          </div>
+        </div>
+      )}
+      {view === "archive_nature" && (
+        <div className="sub-archive-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 998 }}>
+          <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px' }} onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
+          <h2 className="placeholder-title">NATURE</h2>
+        </div>
+      )}
       <div className="ui-overlay">
-        {view === "home" && <div className="progress-bar-container"><div className="progress-bar" style={{ width: `${progress}%` }}></div></div>}
+        {(view === "home" || view === "archive_about") && (
+          <div className="progress-bar-container">
+            <div className="progress-bar" style={{ width: `${progress}%` }}></div>
+          </div>
+        )}
         <div className="footer-info">
           <nav className="nav-links">
             <button className={`nav-btn ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>HOME</button>
             <span className="nav-separator">/</span>
             <button className={`nav-btn ${view.startsWith('archive') ? 'active' : ''}`} onClick={() => setView('archive')}>ARCHIVE</button>
           </nav>
-          <div className="footer-right"><span>RANDOM PROMPT GENERATOR</span>{view === "home" && <div className="hold-hint-group"><span>HOLD TO GENERATE</span></div>}</div>
+          <div className="footer-right">
+            <span>RANDOM PROMPT GENERATOR</span>
+            {(view === "home" || view === "archive_about") && (
+              <div className="hold-hint-group"><span>HOLD TO GENERATE</span></div>
+            )}
+          </div>
         </div>
       </div>
       <div className="bg-elements"><div className={`scanline ${isHolding ? 'active' : ''}`}></div></div>
