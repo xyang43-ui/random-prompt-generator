@@ -9,7 +9,6 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 // Middleware
-// Allow requests from the frontend URL or localhost during development
 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 app.use(cors({
   origin: frontendUrl,
@@ -19,21 +18,23 @@ app.use(cors({
 
 app.use(express.json());
 
-// Persistent Uploads Directory
-const uploadsDir = path.join(__dirname, 'uploads');
+// --- Persistent Paths for Railway ---
+// If Root Directory is /backend, Railway puts everything in /app
+const uploadsDir = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(__dirname, 'uploads');
+const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : __dirname;
+
+// Ensure directories exist
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadsDir));      
-
-// Database Setup - Pointing to a persistent data directory for production
-// Railway Volume should be mounted at /app/backend/data
-const dbDir = process.env.NODE_ENV === 'production' ? '/app/backend/data' : __dirname;
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
-const dbPath = path.join(dbDir, 'database.sqlite');
 
+app.use('/uploads', express.static(uploadsDir));      
+
+// Database Setup
+const dbPath = path.join(dbDir, 'database.sqlite');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database', err.message);
@@ -87,7 +88,9 @@ app.post('/api/prompts', upload.single('media'), (req, res) => {
   // Construct dynamic media URL based on the request host
   const protocol = req.protocol;
   const host = req.get('host');
-  const media_url = `${protocol}://${host}/uploads/${file.filename}`;
+  // Handle https for production
+  const finalProtocol = process.env.NODE_ENV === 'production' ? 'https' : protocol;
+  const media_url = `${finalProtocol}://${host}/uploads/${file.filename}`;
   
   let media_type = 'unknown';
 
