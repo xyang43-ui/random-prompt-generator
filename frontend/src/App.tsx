@@ -230,7 +230,7 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   const fetchPrompts = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/prompts');
+      const response = await fetch(`${API_BASE_URL}/api/prompts`);
       const data = await response.json();
       setPrompts(data);
     } catch (err) {
@@ -308,7 +308,7 @@ const UploadModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({
     formData.append('media', file);
 
     try {
-      const response = await fetch('http://localhost:3001/api/prompts', {
+      const response = await fetch(`${API_BASE_URL}/api/prompts`, {
         method: 'POST',
         body: formData,
       });
