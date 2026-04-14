@@ -5,6 +5,7 @@ import './App.css';
 interface Prompt {
   id: number;
   prompt_text: string;
+  response_text?: string;
   media_url: string;
   media_type: string;
 }
@@ -14,6 +15,8 @@ const NOUNS = [{ s: "text", p: "texts" }, { s: "sound", p: "sounds" }, { s: "sha
 const FONTS = ["'Inter', sans-serif", "'Space Mono', monospace", "'Playfair Display', serif", "'Courier New', Courier, monospace", "Georgia, serif", "Impact, Charcoal, sans-serif", "'Times New Roman', Times, serif", "Arial, Helvetica, sans-serif", "Verdana, Geneva, sans-serif", "Monaco, monospace", "'Garamond', serif", "'Futura', sans-serif", "'Rockwell', serif"];
 const ABOUT_FONTS = ["'Playfair Display', serif", "'Space Mono', monospace", "Impact, Charcoal, sans-serif"];
 const BGM_FILES = ["calm-rhodes-piano-smooth.mp3", "cat-meditation.mp3", "cornfield.mp3", "crackling-fire.mp3", "ocean-waves.mp3", "podcast-lo-fi.mp3", "quietphase-ambient-zen.mp3", "rain-lofi.mp3", "rain-whisper-calm-ambient.mp3", "sad-lo-fi.mp3", "serene-reflections-piano.mp3", "shadows-in-the-haze-piano.mp3", "white-noise.mp3", "zen-oasis.mp3"];
+
+const API_BASE_URL = "https://random-prompt-generator-production.up.railway.app";
 
 const Visualizer: React.FC<{ analyzer: AnalyserNode | null, isPlaying: boolean }> = ({ analyzer, isPlaying }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -81,116 +84,6 @@ const InteractiveBackground: React.FC<{ isHolding: boolean; progress: number; mo
   return <canvas ref={canvasRef} className="interactive-bg" />;
 };
 
-const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h: boolean) => void, progress: number, setProgress: any }> = ({ onNavigate, setIsHolding, progress, setProgress }) => {
-  const [hoveredSide, setHoveredSide] = useState<string | null>(null);
-  const activeHoldSide = useRef<string | null>(null);
-
-  const sideStyles = {
-    left: { font: "Gotham, 'Helvetica Neue', Helvetica, Arial, sans-serif", pathLen: 179 },
-    right: { font: "'Futura', sans-serif", pathLen: 179 },
-    bottom: { font: "'Agency FB', sans-serif", pathLen: 160 }
-  };
-
-  useEffect(() => {
-    let interval: number | undefined;
-    if (activeHoldSide.current) {
-      interval = window.setInterval(() => {
-        setProgress((prev: number) => {
-          if (prev >= 100) { 
-            onNavigate(activeHoldSide.current === 'left' ? 'archive_random' : activeHoldSide.current === 'right' ? 'archive_about' : 'archive_nature'); 
-            setIsHolding(false); 
-            activeHoldSide.current = null; 
-            return 0; 
-          }
-          return prev + 2.5;
-        });
-      }, 20);
-    }
-    return () => clearInterval(interval);
-  }, [activeHoldSide.current, onNavigate, setIsHolding, setProgress]);
-
-  const startHold = (side: string) => { activeHoldSide.current = side; setIsHolding(true); };
-  const stopHold = () => { activeHoldSide.current = null; setIsHolding(false); setProgress(0); };
-
-  const diffusionScales = [1.2, 1.5, 2.1, 2.8, 4.0, 5.8, 8.5];
-
-  return (
-    <div className="archive-nav-container">
-      <svg viewBox="0 0 400 400" className="triangle-svg">
-        <defs>
-          <path id="path-left-1" d="M 110 285 L 190 125" />
-          <path id="path-left-2" d="M 80 270 L 160 110" />
-          <path id="path-right-1" d="M 210 125 L 290 285" />
-          <path id="path-right-2" d="M 240 110 L 320 270" />
-          <path id="path-bottom-1" d="M 120 300 L 280 300" />
-          <path id="path-bottom-2" d="M 120 335 L 280 335" />
-        </defs>
-        
-        {diffusionScales.map((s, i) => {
-          const ty = 226.67 - 106.67 * s;
-          const rx = 200 + 80 * s;
-          const ry = 226.67 + 53.33 * s;
-          const lx = 200 - 80 * s;
-          const ly = 226.67 + 53.33 * s;
-          return (
-            <polygon 
-              key={i}
-              points={`${200},${ty} ${rx},${ry} ${lx},${ly}`} 
-              className="triangle-wire-bg" 
-              style={{ opacity: Math.max(0.01, 0.15 / (s * 0.8)) }}
-            />
-          );
-        })}
-        
-        <polygon points="200,120 280,280 120,280" className="triangle-wire" />
-        
-        <line x1="120" y1="280" x2="200" y2="120" className="triangle-edge-base" />
-        <line x1="200" y1="120" x2="280" y2="280" className="triangle-edge-base" />
-        <line x1="120" y1="280" x2="280" y2="280" className="triangle-edge-base" />
-
-        <line x1="120" y1="280" x2="200" y2="120" className="triangle-edge-progress" 
-              style={{ strokeDasharray: 179, strokeDashoffset: activeHoldSide.current === 'left' ? 179 - (179 * progress / 100) : 179, opacity: activeHoldSide.current === 'left' ? 1 : 0 }} />
-        <line x1="200" y1="120" x2="280" y2="280" className="triangle-edge-progress" 
-              style={{ strokeDasharray: 179, strokeDashoffset: activeHoldSide.current === 'right' ? 179 - (179 * progress / 100) : 179, opacity: activeHoldSide.current === 'right' ? 1 : 0 }} />
-        <line x1="120" y1="280" x2="280" y2="280" className="triangle-edge-progress" 
-              style={{ strokeDasharray: 160, strokeDashoffset: activeHoldSide.current === 'bottom' ? 160 - (160 * progress / 100) : 160, opacity: activeHoldSide.current === 'bottom' ? 1 : 0 }} />
-
-        <g className={`archive-label label-left ${hoveredSide === 'left' || activeHoldSide.current === 'left' ? 'active' : ''}`} 
-           onMouseEnter={() => setHoveredSide('left')} onMouseLeave={() => setHoveredSide(null)} 
-           onMouseDown={() => startHold('left')} onMouseUp={stopHold} onTouchStart={() => startHold('left')} onTouchEnd={stopHold}>
-          <text style={{ fontFamily: sideStyles.left.font }}>
-            <textPath xlinkHref="#path-left-2" textLength="179" lengthAdjust="spacingAndGlyphs">RANDOM</textPath>
-            <textPath xlinkHref="#path-left-1" textLength="179" lengthAdjust="spacingAndGlyphs">PROMPT</textPath>
-          </text>
-          <rect x="20" y="100" width="180" height="260" fill="transparent" style={{ cursor: 'pointer' }} transform="rotate(-63, 110, 230)" />
-        </g>
-
-        <g className={`archive-label label-right ${hoveredSide === 'right' || activeHoldSide.current === 'right' ? 'active' : ''}`} 
-           onMouseEnter={() => setHoveredSide('right')} onMouseLeave={() => setHoveredSide(null)} 
-           onMouseDown={() => startHold('right')} onMouseUp={stopHold} onTouchStart={() => startHold('right')} onTouchEnd={stopHold}>
-          <text style={{ fontFamily: sideStyles.right.font, fontWeight: 100 }}>
-            <textPath xlinkHref="#path-right-2" textLength="179" lengthAdjust="spacingAndGlyphs">PROMPT ABOUT</textPath>
-            <textPath xlinkHref="#path-right-1" textLength="179" lengthAdjust="spacingAndGlyphs">RANDOMNESS</textPath>
-          </text>
-          <rect x="200" y="100" width="180" height="260" fill="transparent" style={{ cursor: 'pointer' }} transform="rotate(63, 290, 230)" />
-        </g>
-
-        <g className={`archive-label label-bottom ${hoveredSide === 'bottom' || activeHoldSide.current === 'bottom' ? 'active' : ''}`} 
-           onMouseEnter={() => setHoveredSide('bottom')} onMouseLeave={() => setHoveredSide(null)} 
-           onMouseDown={() => startHold('bottom')} onMouseUp={stopHold} onTouchStart={() => startHold('bottom')} onTouchEnd={stopHold}>
-          <text style={{ fontFamily: sideStyles.bottom.font }}>
-            <textPath xlinkHref="#path-bottom-1" textLength="160" lengthAdjust="spacingAndGlyphs">RANDOMNESS</textPath>
-            <textPath xlinkHref="#path-bottom-2" textLength="160" lengthAdjust="spacingAndGlyphs">IN NATURE</textPath>
-          </text>
-          <rect x="110" y="290" width="180" height="120" fill="transparent" style={{ cursor: 'pointer' }} />
-        </g>
-      </svg>
-    </div>
-  );
-};
-
-const API_BASE_URL = "https://random-prompt-generator-production.up.railway.app";
-
 const FloatingPrompt: React.FC<{ text: string; onClick: () => void }> = ({ text, onClick }) => {
   const [pos, setPos] = useState({ x: Math.random() * (window.innerWidth - 200), y: Math.random() * (window.innerHeight - 100) });
   const [vel] = useState({ x: (Math.random() - 0.5) * 1.5, y: (Math.random() - 0.5) * 1.5 });
@@ -219,6 +112,84 @@ const FloatingPrompt: React.FC<{ text: string; onClick: () => void }> = ({ text,
       onClick={(e) => { e.stopPropagation(); onClick(); }}
     >
       {text}
+    </div>
+  );
+};
+
+const UploadModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
+  const [promptText, setPromptText] = useState('');
+  const [responseText, setResponseText] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promptText) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('prompt_text', promptText);
+    formData.append('response_text', responseText);
+    if (file) formData.append('media', file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/prompts`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (response.ok) {
+        onSuccess();
+      } else {
+        alert("Upload failed");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Upload error");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content upload-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-prompt-title">SUBMIT YOUR PROMPT</div>
+        <form onSubmit={handleSubmit} className="upload-form">
+          <div className="form-group">
+            <label>PROMPT</label>
+            <input 
+              type="text" 
+              value={promptText} 
+              onChange={(e) => setPromptText(e.target.value)} 
+              placeholder=""
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>RESPONSE</label>
+            <textarea 
+              value={responseText} 
+              onChange={(e) => setResponseText(e.target.value)} 
+              placeholder=""
+              rows={4}
+            />
+          </div>
+          <div className="form-group">
+            <label>MEDIA FILE</label>
+            <input 
+              type="file" 
+              accept="image/*,video/*,audio/*" 
+              onChange={(e) => setFile(e.target.files?.[0] || null)} 
+            />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>CANCEL</button>
+            <button type="submit" className="submit-btn" disabled={isUploading}>
+              {isUploading ? 'UPLOADING...' : 'SUBMIT'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
@@ -277,22 +248,30 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         <div className="modal-overlay" onClick={() => setSelectedPrompt(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-prompt-title">{selectedPrompt.prompt_text}</div>
-            <div className="modal-media-container">
-              {selectedPrompt.media_type === 'image' && <img src={selectedPrompt.media_url} alt={selectedPrompt.prompt_text} className="modal-media" />}
-              {selectedPrompt.media_type === 'video' && <video src={selectedPrompt.media_url} controls className="modal-media" />}
-              {selectedPrompt.media_type === 'audio' && (
-                <div className="audio-display">
-                  <div className="modal-placeholder-icon">♬</div>
-                  <audio src={selectedPrompt.media_url} controls />
-                </div>
-              )}
-              {selectedPrompt.media_type === 'placeholder' && (
-                <div className="modal-placeholder">
-                  <div className="modal-placeholder-icon">⠿</div>
-                  <div className="modal-placeholder-text">MEDIA CONTENT PLACEHOLDER</div>
-                </div>
-              )}
-            </div>
+            
+            {selectedPrompt.response_text && (
+              <div className="modal-response-text">{selectedPrompt.response_text}</div>
+            )}
+
+            {selectedPrompt.media_type !== 'text' && (
+              <div className="modal-media-container">
+                {selectedPrompt.media_type === 'image' && <img src={selectedPrompt.media_url} alt={selectedPrompt.prompt_text} className="modal-media" />}
+                {selectedPrompt.media_type === 'video' && <video src={selectedPrompt.media_url} controls className="modal-media" />}
+                {selectedPrompt.media_type === 'audio' && (
+                  <div className="audio-display">
+                    <div className="modal-placeholder-icon">♬</div>
+                    <audio src={selectedPrompt.media_url} controls />
+                  </div>
+                )}
+                {selectedPrompt.media_type === 'placeholder' && (
+                  <div className="modal-placeholder">
+                    <div className="modal-placeholder-icon">⠿</div>
+                    <div className="modal-placeholder-text">MEDIA CONTENT PLACEHOLDER</div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {selectedPrompt.id !== 0 && (
               <button className="delete-btn" onClick={() => handleDelete(selectedPrompt.id)}>DELETE PROMPT</button>
             )}
@@ -310,74 +289,6 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           }} 
         />
       )}
-    </div>
-  );
-};
-
-const UploadModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
-  const [promptText, setPromptText] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!promptText || !file) return;
-
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append('prompt_text', promptText);
-    formData.append('media', file);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/prompts`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (response.ok) {
-        onSuccess();
-      } else {
-        alert("Upload failed");
-      }
-    } catch (err) {
-      console.error("Upload error:", err);
-      alert("Upload error");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content upload-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-prompt-title">SUBMIT RESPONSE</div>
-        <form onSubmit={handleSubmit} className="upload-form">
-          <div className="form-group">
-            <label>PROMPT TEXT</label>
-            <input 
-              type="text" 
-              value={promptText} 
-              onChange={(e) => setPromptText(e.target.value)} 
-              placeholder="What is this response to?"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>MEDIA FILE (IMG/VID/AUD)</label>
-            <input 
-              type="file" 
-              accept="image/*,video/*,audio/*" 
-              onChange={(e) => setFile(e.target.files?.[0] || null)} 
-              required
-            />
-          </div>
-          <div className="form-actions">
-            <button type="button" className="cancel-btn" onClick={onClose}>CANCEL</button>
-            <button type="submit" className="submit-btn" disabled={isUploading}>
-              {isUploading ? 'UPLOADING...' : 'SUBMIT'}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 };
@@ -476,7 +387,7 @@ function App() {
         )}
       </main>
 
-      {/* Archive and Sub-views (Rendered outside main-content to avoid transform centering) */}
+      {/* Archive and Sub-views */}
       {view === "archive" && (
         <ArchiveFloatingView onBack={() => setView('home')} />
       )}

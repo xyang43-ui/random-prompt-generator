@@ -19,12 +19,10 @@ app.use(cors({
 app.use(express.json());
 
 // --- Unified Storage Path for Railway Free Tier ---
-// In production, we use a single Volume mounted at /app/storage
 const baseStorageDir = process.env.NODE_ENV === 'production' ? '/app/storage' : __dirname;
 const uploadsDir = path.join(baseStorageDir, 'uploads');
 const dbDir = path.join(baseStorageDir, 'data');
 
-// Ensure directories exist
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -44,7 +42,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
     db.run(`CREATE TABLE IF NOT EXISTS prompts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       prompt_text TEXT NOT NULL,
-      media_url TEXT NOT NULL,
+      response_text TEXT,
+      media_url TEXT,
       media_type TEXT NOT NULL
     )`, (err) => {
       if (err) {
@@ -54,7 +53,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Multer Storage Configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
@@ -79,31 +77,29 @@ app.get('/api/prompts', (req, res) => {
 });
 
 app.post('/api/prompts', upload.single('media'), (req, res) => {
-  const { prompt_text } = req.body;
+  const { prompt_text, response_text } = req.body;
   const file = req.file;
 
-  if (!file) {
-    return res.status(400).json({ error: 'Please upload a file' });        
+  let media_url = "";
+  let media_type = "text";
+
+  if (file) {
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const finalProtocol = process.env.NODE_ENV === 'production' ? 'https' : protocol;
+    media_url = `${finalProtocol}://${host}/uploads/${file.filename}`;
+    
+    if (file.mimetype.startsWith('image/')) {
+      media_type = 'image';
+    } else if (file.mimetype.startsWith('video/')) {
+      media_type = 'video';
+    } else if (file.mimetype.startsWith('audio/')) {
+      media_type = 'audio';
+    }
   }
 
-  // Construct dynamic media URL based on the request host
-  const protocol = req.protocol;
-  const host = req.get('host');
-  const finalProtocol = process.env.NODE_ENV === 'production' ? 'https' : protocol;
-  const media_url = `${finalProtocol}://${host}/uploads/${file.filename}`;
-  
-  let media_type = 'unknown';
-
-  if (file.mimetype.startsWith('image/')) {
-    media_type = 'image';
-  } else if (file.mimetype.startsWith('video/')) {
-    media_type = 'video';
-  } else if (file.mimetype.startsWith('audio/')) {
-    media_type = 'audio';
-  }
-
-  const sql = 'INSERT INTO prompts (prompt_text, media_url, media_type) VALUES (?, ?, ?)';
-  const params = [prompt_text, media_url, media_type];
+  const sql = 'INSERT INTO prompts (prompt_text, response_text, media_url, media_type) VALUES (?, ?, ?, ?)';
+  const params = [prompt_text, response_text || "", media_url, media_type];
 
   db.run(sql, params, function(err) {
     if (err) {
@@ -113,6 +109,7 @@ app.post('/api/prompts', upload.single('media'), (req, res) => {
     res.json({
       id: this.lastID,
       prompt_text,
+      response_text,
       media_url,
       media_type
     });
@@ -122,7 +119,6 @@ app.post('/api/prompts', upload.single('media'), (req, res) => {
 app.delete('/api/prompts/:id', (req, res) => {
   const { id } = req.params;
   
-  // 1. Get the file path first to delete the file
   db.get('SELECT media_url FROM prompts WHERE id = ?', [id], (err, row) => {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -131,17 +127,14 @@ app.delete('/api/prompts/:id', (req, res) => {
       return res.status(404).json({ error: 'Prompt not found' });
     }
 
-    // Extract filename from URL
     const filename = row.media_url.split('/').pop();
     const filePath = path.join(uploadsDir, filename);
 
-    // 2. Delete the database record
     db.run('DELETE FROM prompts WHERE id = ?', [id], function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
 
-      // 3. Delete the physical file (optional but recommended)
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
