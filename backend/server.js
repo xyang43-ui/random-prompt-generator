@@ -12,7 +12,7 @@ const port = process.env.PORT || 3001;
 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 app.use(cors({
   origin: frontendUrl,
-  methods: ["GET", "POST"],
+  methods: ["GET", "POST", "DELETE"],
   credentials: true
 }));
 
@@ -115,6 +115,38 @@ app.post('/api/prompts', upload.single('media'), (req, res) => {
       prompt_text,
       media_url,
       media_type
+    });
+  });
+});
+
+app.delete('/api/prompts/:id', (req, res) => {
+  const { id } = req.params;
+  
+  // 1. Get the file path first to delete the file
+  db.get('SELECT media_url FROM prompts WHERE id = ?', [id], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Prompt not found' });
+    }
+
+    // Extract filename from URL
+    const filename = row.media_url.split('/').pop();
+    const filePath = path.join(uploadsDir, filename);
+
+    // 2. Delete the database record
+    db.run('DELETE FROM prompts WHERE id = ?', [id], function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      // 3. Delete the physical file (optional but recommended)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      res.json({ message: 'Deleted successfully', id });
     });
   });
 });

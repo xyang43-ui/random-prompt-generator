@@ -242,6 +242,24 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     fetchPrompts();
   }, [fetchPrompts]);
 
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this prompt?")) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/prompts/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setSelectedPrompt(null);
+        fetchPrompts();
+      } else {
+        alert("Failed to delete");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Delete error");
+    }
+  };
+
   return (
     <div className="sub-archive-view archive-floating-container">
       <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px', margin: 0 }} onClick={onBack}>BACK TO HOME</button>
@@ -275,6 +293,9 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 </div>
               )}
             </div>
+            {selectedPrompt.id !== 0 && (
+              <button className="delete-btn" onClick={() => handleDelete(selectedPrompt.id)}>DELETE PROMPT</button>
+            )}
             <div className="modal-placeholder-text" style={{ fontSize: '0.6rem', marginTop: '20px' }}>CLICK OUTSIDE TO RETURN</div>
           </div>
         </div>
