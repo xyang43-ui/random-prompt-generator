@@ -18,10 +18,11 @@ app.use(cors({
 
 app.use(express.json());
 
-// --- Persistent Paths for Railway ---
-// If Root Directory is /backend, Railway puts everything in /app
-const uploadsDir = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(__dirname, 'uploads');
-const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : __dirname;
+// --- Unified Storage Path for Railway Free Tier ---
+// In production, we use a single Volume mounted at /app/storage
+const baseStorageDir = process.env.NODE_ENV === 'production' ? '/app/storage' : __dirname;
+const uploadsDir = path.join(baseStorageDir, 'uploads');
+const dbDir = path.join(baseStorageDir, 'data');
 
 // Ensure directories exist
 if (!fs.existsSync(uploadsDir)) {
@@ -88,7 +89,6 @@ app.post('/api/prompts', upload.single('media'), (req, res) => {
   // Construct dynamic media URL based on the request host
   const protocol = req.protocol;
   const host = req.get('host');
-  // Handle https for production
   const finalProtocol = process.env.NODE_ENV === 'production' ? 'https' : protocol;
   const media_url = `${finalProtocol}://${host}/uploads/${file.filename}`;
   
