@@ -189,7 +189,7 @@ const ArchiveTriangle: React.FC<{ onNavigate: (v: any) => void, setIsHolding: (h
   );
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE_URL = "https://random-prompt-generator-production.up.railway.app";
 
 const FloatingPrompt: React.FC<{ text: string; onClick: () => void }> = ({ text, onClick }) => {
   const [pos, setPos] = useState({ x: Math.random() * (window.innerWidth - 200), y: Math.random() * (window.innerHeight - 100) });
