@@ -294,6 +294,15 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   );
 };
 
+const CustomCursor: React.FC<{ mousePos: { x: number, y: number }, isHolding: boolean }> = ({ mousePos, isHolding }) => {
+  return (
+    <div 
+      className={`custom-cursor ${isHolding ? 'is-holding' : ''}`} 
+      style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px` }}
+    />
+  );
+};
+
 function App() {
   type ViewState = "home" | "archive" | "archive_random" | "archive_about" | "archive_nature";
   const [view, setView] = useState<ViewState>("home");
@@ -353,6 +362,7 @@ function App() {
 
   return (
     <div className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} onMouseDown={(e) => { setMousePos({ x: e.clientX, y: e.clientY }); if(view==="home" || view==="archive_about") setIsHolding(true); initAudio(); }} onMouseUp={() => setIsHolding(false)} onMouseLeave={() => setIsHolding(false)} onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} onTouchStart={(e) => { setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); if(view==="home" || view==="archive_about") setIsHolding(true); initAudio(); }} onTouchEnd={() => setIsHolding(false)} onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}>
+      <CustomCursor mousePos={mousePos} isHolding={isHolding} />
       <audio ref={audioRef} src={currentTrack ? `/bgm/${currentTrack}` : undefined} loop />
       <InteractiveBackground isHolding={isHolding} progress={progress} mousePos={mousePos} />
       <div className="vignette"></div>
