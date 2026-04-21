@@ -315,6 +315,14 @@ function App() {
 
   const [aboutPromptIndex, setAboutPromptIndex] = useState(0);
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   const initAudio = () => {
     if (!audioCtxRef.current) {
       const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
