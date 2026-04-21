@@ -10,8 +10,10 @@ const port = process.env.PORT || 3001;
 
 // Middleware
 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+const allowedOrigins = frontendUrl.split(',').map(url => url.trim());
+
 app.use(cors({
-  origin: frontendUrl,
+  origin: allowedOrigins,
   methods: ["GET", "POST", "DELETE"],
   credentials: true
 }));
