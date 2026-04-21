@@ -175,27 +175,41 @@ app.use((err, req, res, next) => {
 
 app.delete('/api/prompts/:id', (req, res) => {
   const { id } = req.params;
+  console.log(`DELETE /api/prompts/${id} requested`);
   
   db.get('SELECT media_url FROM prompts WHERE id = ?', [id], (err, row) => {
     if (err) {
-      return res.status(500).json({ error: err.message });
+      console.error('DB Error (DELETE lookup):', err.message);
+      return res.status(500).json({ error: 'Database lookup failed', details: err.message });
     }
     if (!row) {
       return res.status(404).json({ error: 'Prompt not found' });
     }
 
-    const filename = row.media_url.split('/').pop();
-    const filePath = path.join(uploadsDir, filename);
+    // Attempt to delete file if it exists
+    if (row.media_url) {
+      try {
+        const filename = row.media_url.split('/').pop();
+        const filePath = path.join(uploadsDir, filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log('File deleted:', filePath);
+        } else {
+          console.warn('File not found on disk, skipping unlinking:', filePath);
+        }
+      } catch (fileErr) {
+        console.error('Error deleting file:', fileErr.message);
+        // We continue anyway to delete the database record
+      }
+    }
 
     db.run('DELETE FROM prompts WHERE id = ?', [id], function(err) {
       if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+        console.error('DB Error (DELETE execution):', err.message);
+        return res.status(500).json({ error: 'Database deletion failed', details: err.message });
       }
       
+      console.log(`Record ${id} deleted successfully`);
       res.json({ message: 'Deleted successfully', id });
     });
   });
