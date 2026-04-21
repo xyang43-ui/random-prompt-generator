@@ -442,75 +442,92 @@ function App() {
 
   return (
     <>
-    <div className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} onMouseDown={(e) => { setMousePos({ x: e.clientX, y: e.clientY }); if(view==="home" || view==="archive_about") setIsHolding(true); initAudio(); }} onMouseUp={() => setIsHolding(false)} onMouseLeave={() => setIsHolding(false)} onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} onTouchStart={(e) => { setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); if(view==="home" || view==="archive_about") setIsHolding(true); initAudio(); }} onTouchEnd={() => setIsHolding(false)} onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}>
-      <audio ref={audioRef} src={currentTrack ? `/bgm/${currentTrack}` : undefined} loop />
-      <InteractiveBackground isHolding={isHolding} progress={progress} mousePos={mousePos} />
-      <div className="vignette"></div>
-      <div className="top-nav">
-        {view === "home" && (
-          <div className="mini-audio-controls" onClick={toggleMute} style={{ borderRight: 'none', cursor: 'pointer' }}>
-            <Visualizer analyzer={analyzerRef.current} isPlaying={isPlaying} />
-          </div>
-        )}
-      </div>
-      <main className="main-content">
-        {view === "home" && (
-          <div className="prompt-wrapper">
-            <h1 className={`prompt-display ${isHolding ? 'holding' : ''} ${isPlural ? 'plural' : 'singular'}`}>
-              <InteractiveLine text={verb} font={verbFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
-              {!isPlural && <InteractiveLine text={article} font={articleFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />}
-              <InteractiveLine text={noun} font={nounFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
-            </h1>
-          </div>
-        )}
-      </main>
+      <div 
+        className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} 
+        onMouseDown={(e) => { 
+          setMousePos({ x: e.clientX, y: e.clientY }); 
+          if(view==="home" || view==="archive_about") setIsHolding(true); 
+          initAudio(); 
+        }} 
+        onMouseUp={() => setIsHolding(false)} 
+        onMouseLeave={() => setIsHolding(false)} 
+        onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} 
+        onTouchStart={(e) => { 
+          setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); 
+          if(view==="home" || view==="archive_about") setIsHolding(true); 
+          initAudio(); 
+        }} 
+        onTouchEnd={() => setIsHolding(false)} 
+        onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}
+      >
+        <audio ref={audioRef} src={currentTrack ? `/bgm/${currentTrack}` : undefined} loop />
+        <InteractiveBackground isHolding={isHolding} progress={progress} mousePos={mousePos} />
+        <div className="vignette"></div>
+        <div className="top-nav">
+          {view === "home" && (
+            <div className="mini-audio-controls" onClick={toggleMute} style={{ borderRight: 'none', cursor: 'pointer' }}>
+              <Visualizer analyzer={analyzerRef.current} isPlaying={isPlaying} />
+            </div>
+          )}
+        </div>
+        <main className="main-content">
+          {view === "home" && (
+            <div className="prompt-wrapper">
+              <h1 className={`prompt-display ${isHolding ? 'holding' : ''} ${isPlural ? 'plural' : 'singular'}`}>
+                <InteractiveLine text={verb} font={verbFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
+                {!isPlural && <InteractiveLine text={article} font={articleFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />}
+                <InteractiveLine text={noun} font={nounFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
+              </h1>
+            </div>
+          )}
+        </main>
 
-      {/* Archive and Sub-views */}
-      {view === "archive" && (
-        <ArchiveFloatingView onBack={() => setView('home')} />
-      )}
-      {view === "archive_random" && (
-        <ArchiveFloatingView onBack={() => setView('archive')} />
-      )}
-      {view === "archive_about" && (
-        <div className="sub-archive-view about-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 998 }}>
-          <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px' }} onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
-          <div className="prompt-wrapper" style={{ marginTop: '50vh', transform: 'translateY(-50%)' }}>
-            <h1 className={`prompt-display ${isHolding ? 'holding' : ''}`}>
-              <InteractiveLine text="explain randomness" font={ABOUT_FONTS[aboutPromptIndex]} mousePos={mousePos} isHolding={isHolding} progress={progress} />
-            </h1>
-          </div>
-        </div>
-      )}
-      {view === "archive_nature" && (
-        <div className="sub-archive-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 998 }}>
-          <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px' }} onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
-          <h2 className="placeholder-title">NATURE</h2>
-        </div>
-      )}
-      <div className="ui-overlay">
-        {(view === "home" || view === "archive_about") && (
-          <div className="progress-bar-container">
-            <div className="progress-bar" style={{ width: `${progress}%` }}></div>
+        {/* Archive and Sub-views */}
+        {view === "archive" && (
+          <ArchiveFloatingView onBack={() => setView('home')} />
+        )}
+        {view === "archive_random" && (
+          <ArchiveFloatingView onBack={() => setView('archive')} />
+        )}
+        {view === "archive_about" && (
+          <div className="sub-archive-view about-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 998 }}>
+            <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px' }} onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
+            <div className="prompt-wrapper" style={{ marginTop: '50vh', transform: 'translateY(-50%)' }}>
+              <h1 className={`prompt-display ${isHolding ? 'holding' : ''}`}>
+                <InteractiveLine text="explain randomness" font={ABOUT_FONTS[aboutPromptIndex]} mousePos={mousePos} isHolding={isHolding} progress={progress} />
+              </h1>
+            </div>
           </div>
         )}
-        <div className="footer-info">
-          <nav className="nav-links">
-            <button className={`nav-btn ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>HOME</button>
-            <span className="nav-separator">/</span>
-            <button className={`nav-btn ${view.startsWith('archive') ? 'active' : ''}`} onClick={() => setView('archive')}>ARCHIVE</button>
-          </nav>
-          <div className="footer-right">
-            <span>RANDOM PROMPT GENERATOR</span>
-            {(view === "home" || view === "archive_about") && (
-              <div className="hold-hint-group"><span>HOLD TO GENERATE</span></div>
-            )}
+        {view === "archive_nature" && (
+          <div className="sub-archive-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 998 }}>
+            <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px' }} onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
+            <h2 className="placeholder-title">NATURE</h2>
+          </div>
+        )}
+        <div className="ui-overlay">
+          {(view === "home" || view === "archive_about") && (
+            <div className="progress-bar-container">
+              <div className="progress-bar" style={{ width: `${progress}%` }}></div>
+            </div>
+          )}
+          <div className="footer-info">
+            <nav className="nav-links">
+              <button className={`nav-btn ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>HOME</button>
+              <span className="nav-separator">/</span>
+              <button className={`nav-btn ${view.startsWith('archive') ? 'active' : ''}`} onClick={() => setView('archive')}>ARCHIVE</button>
+            </nav>
+            <div className="footer-right">
+              <span>RANDOM PROMPT GENERATOR</span>
+              {(view === "home" || view === "archive_about") && (
+                <div className="hold-hint-group"><span>HOLD TO GENERATE</span></div>
+              )}
+            </div>
           </div>
         </div>
+        <div className="bg-elements"><div className={`scanline ${isHolding ? 'active' : ''}`}></div></div>
       </div>
-      <div className="bg-elements"><div className={`scanline ${isHolding ? 'active' : ''}`}></div></div>
-    </div>
-    <CustomCursor mousePos={mousePos} isHolding={isHolding} />
+      <CustomCursor mousePos={mousePos} isHolding={isHolding} />
     </>
   );
 }
