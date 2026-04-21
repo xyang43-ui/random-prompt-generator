@@ -14,7 +14,34 @@ const VERBS = ["organize", "deconstruct", "reimagine", "capture", "distort", "se
 const NOUNS = [{ s: "text", p: "texts" }, { s: "sound", p: "sounds" }, { s: "shadow", p: "shadows" }, { s: "memory", p: "memories" }, { s: "rhythm", p: "rhythms" }, { s: "void", p: "voids" }, { s: "color", p: "colors" }, { s: "texture", p: "textures" }, { s: "movement", p: "movements" }, { s: "silence", p: "silences" }, { s: "glitch", p: "glitches" }, { s: "pattern", p: "patterns" }, { s: "dream", p: "dreams" }, { s: "city", p: "cities" }, { s: "face", p: "faces" }, { s: "word", p: "words" }, { s: "line", p: "lines" }, { s: "shape", p: "shapes" }, { s: "breath", p: "breaths" }, { s: "pulse", p: "pulses" }, { s: "reflection", p: "reflections" }, { s: "fragment", p: "fragments" }, { s: "ghost", p: "ghosts" }, { s: "mirror", p: "mirrors" }, { s: "surface", p: "surfaces" }, { s: "depth", p: "depths" }, { s: "limit", p: "limits" }, { s: "flow", p: "flows" }, { s: "friction", p: "frictions" }, { s: "gravity", p: "gravities" }, { s: "time", p: "times" }, { s: "space", p: "spaces" }, { s: "light", p: "lights" }, { s: "dark", p: "darks" }, { s: "noise", p: "noises" }, { s: "signal", p: "signals" }, { s: "body", p: "bodies" }, { s: "skin", p: "skins" }, { s: "bone", p: "bones" }, { s: "liquid", p: "liquids" }, { s: "gas", p: "gases" }, { s: "solid", p: "solids" }, { s: "weight", p: "weights" }, { s: "mass", p: "masses" }, { s: "scale", p: "scales" }, { s: "distance", p: "distances" }, { s: "proximity", p: "proximities" }, { s: "boundary", p: "boundaries" }, { s: "portal", p: "portals" }, { s: "seed", p: "seeds" }, { s: "echo", p: "echoes" }, { s: "trace", p: "traces" }, { s: "spectrum", p: "spectrums" }, { s: "landscape", p: "landscapes" }, { s: "vessel", p: "vessels" }, { s: "horizon", p: "horizons" }, { s: "structure", p: "structures" }, { s: "sequence", p: "sequences" }, { s: "wave", p: "waves" }, { s: "field", p: "fields" }];
 const FONTS = ["'Inter', sans-serif", "'Space Mono', monospace", "'Playfair Display', serif", "'Courier New', Courier, monospace", "Georgia, serif", "Impact, Charcoal, sans-serif", "'Times New Roman', Times, serif", "Arial, Helvetica, sans-serif", "Verdana, Geneva, sans-serif", "Monaco, monospace", "'Garamond', serif", "'Futura', sans-serif", "'Rockwell', serif"];
 const ABOUT_FONTS = ["'Playfair Display', serif", "'Space Mono', monospace", "Impact, Charcoal, sans-serif"];
-const BGM_FILES = ["calm-rhodes-piano-smooth.mp3", "cat-meditation.mp3", "cornfield.mp3", "crackling-fire.mp3", "ocean-waves.mp3", "podcast-lo-fi.mp3", "quietphase-ambient-zen.mp3", "rain-lofi.mp3", "rain-whisper-calm-ambient.mp3", "sad-lo-fi.mp3", "serene-reflections-piano.mp3", "shadows-in-the-haze-piano.mp3", "white-noise.mp3", "zen-oasis.mp3"];
+const BGM_FILES = [
+  "absolutesound-suspense-suspense-thriller-514612.mp3",
+  "bombinsound-no-copyright-vlog-499473.mp3",
+  "calm-rhodes-piano-smooth.mp3", 
+  "cat-meditation.mp3", 
+  "cornfield.mp3", 
+  "crackling-fire.mp3", 
+  "geoffharvey-cute-creatures-150622.mp3",
+  "lexin_music-inspiring-cinematic-ambient-116199.mp3",
+  "nastelbom-asian-asian-china-chinese-music-501705.mp3",
+  "nveravetyanmusic-kick-bass-g-house-515600.mp3",
+  "ocean-waves.mp3", 
+  "paulyudin-tension-tension-music-491416.mp3",
+  "podcast-lo-fi.mp3", 
+  "quietphase-ambient-zen.mp3", 
+  "rain-lofi.mp3", 
+  "rain-whisper-calm-ambient.mp3", 
+  "sad-lo-fi.mp3", 
+  "serene-reflections-piano.mp3", 
+  "shadows-in-the-haze-piano.mp3", 
+  "the_mountain-documentary-documentary-music-508000.mp3",
+  "the_mountain-lofi-513863.mp3",
+  "tunetank-dark-electronic-rock-beat-347664.mp3",
+  "viacheslavstarostin-we-wish-you-a-merry-christmas-444573.mp3",
+  "white_records-happy-birthday-to-you-background-music-for-the-holiday-jazz-version-316322.mp3",
+  "white-noise.mp3", 
+  "zen-oasis.mp3"
+];
 
 const API_BASE_URL = "https://random-prompt-generator-production.up.railway.app";
 
@@ -414,8 +441,8 @@ function App() {
   }, [isHolding, generateRandomPrompt, generateAboutPrompt, view]);
 
   return (
+    <>
     <div className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} onMouseDown={(e) => { setMousePos({ x: e.clientX, y: e.clientY }); if(view==="home" || view==="archive_about") setIsHolding(true); initAudio(); }} onMouseUp={() => setIsHolding(false)} onMouseLeave={() => setIsHolding(false)} onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} onTouchStart={(e) => { setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); if(view==="home" || view==="archive_about") setIsHolding(true); initAudio(); }} onTouchEnd={() => setIsHolding(false)} onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}>
-      <CustomCursor mousePos={mousePos} isHolding={isHolding} />
       <audio ref={audioRef} src={currentTrack ? `/bgm/${currentTrack}` : undefined} loop />
       <InteractiveBackground isHolding={isHolding} progress={progress} mousePos={mousePos} />
       <div className="vignette"></div>
