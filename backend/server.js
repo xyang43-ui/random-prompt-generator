@@ -32,18 +32,21 @@ app.use(cors({
 app.use(express.json());
 
 // --- Unified Storage Path ---
-// Using a relative 'storage' folder inside the app directory is safer on Railway 
-// unless a specific Volume is mounted at a root path.
-const baseStorageDir = path.join(__dirname, 'storage');
+// On Railway, /tmp is always writable. Let's use it as a fallback or primary for production.
+const baseStorageDir = process.env.NODE_ENV === 'production' 
+    ? '/tmp/random-untitled-storage' 
+    : path.join(__dirname, 'storage');
+
 const uploadsDir = path.join(baseStorageDir, 'uploads');
 const dbDir = path.join(baseStorageDir, 'data');
 
-console.log('Ensuring directories exist...');
+console.log('Target Storage Directory:', baseStorageDir);
+
 try {
   if (!fs.existsSync(baseStorageDir)) fs.mkdirSync(baseStorageDir, { recursive: true });
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
-  console.log('Directories verified.');
+  console.log('Directories verified/created at:', baseStorageDir);
 } catch (err) {
   console.error('CRITICAL: Failed to create storage directories:', err.message);
 }
