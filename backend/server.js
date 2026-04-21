@@ -11,9 +11,20 @@ const port = process.env.PORT || 3001;
 // Middleware
 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 const allowedOrigins = frontendUrl.split(',').map(url => url.trim());
+console.log('Backend starting...');
+console.log('Allowed Origins:', allowedOrigins);
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked for origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ["GET", "POST", "DELETE"],
   credentials: true
 }));
