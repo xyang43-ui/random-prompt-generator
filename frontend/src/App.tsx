@@ -379,9 +379,16 @@ function App() {
   }, []);
 
   const playRandomTrack = useCallback(() => {
-    const randomTrack = BGM_FILES[Math.floor(Math.random() * BGM_FILES.length)];
-    handleTrackChange(randomTrack);
-  }, [handleTrackChange]);
+    let nextTrack;
+    if (BGM_FILES.length > 1) {
+      do {
+        nextTrack = BGM_FILES[Math.floor(Math.random() * BGM_FILES.length)];
+      } while (nextTrack === currentTrack);
+    } else {
+      nextTrack = BGM_FILES[0];
+    }
+    handleTrackChange(nextTrack);
+  }, [handleTrackChange, currentTrack]);
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
