@@ -450,6 +450,7 @@ function App() {
         </div>
       </div>
       <div className="bg-elements"><div className={`scanline ${isHolding ? 'active' : ''}`}></div></div>
+      <CustomCursor mousePos={mousePos} isHolding={isHolding} />
     </div>
   );
 }
