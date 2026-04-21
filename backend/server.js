@@ -31,16 +31,21 @@ app.use(cors({
 
 app.use(express.json());
 
-// --- Unified Storage Path for Railway Free Tier ---
-const baseStorageDir = process.env.NODE_ENV === 'production' ? '/app/storage' : __dirname;
+// --- Unified Storage Path ---
+// Using a relative 'storage' folder inside the app directory is safer on Railway 
+// unless a specific Volume is mounted at a root path.
+const baseStorageDir = path.join(__dirname, 'storage');
 const uploadsDir = path.join(baseStorageDir, 'uploads');
 const dbDir = path.join(baseStorageDir, 'data');
 
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+console.log('Ensuring directories exist...');
+try {
+  if (!fs.existsSync(baseStorageDir)) fs.mkdirSync(baseStorageDir, { recursive: true });
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+  console.log('Directories verified.');
+} catch (err) {
+  console.error('CRITICAL: Failed to create storage directories:', err.message);
 }
 
 app.use('/uploads', express.static(uploadsDir));      
