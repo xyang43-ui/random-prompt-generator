@@ -88,7 +88,10 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 // Routes
 app.get('/api/prompts', (req, res) => {
@@ -96,55 +99,74 @@ app.get('/api/prompts', (req, res) => {
   db.all('SELECT * FROM prompts ORDER BY id DESC', [], (err, rows) => {    
     if (err) {
       console.error('DB Error (GET):', err.message);
-      res.status(500).json({ error: 'Database error', details: err.message });
-      return;
+      return res.status(500).json({ error: 'Database error', details: err.message });
     }
     res.json(rows);
   });
 });
 
-app.post('/api/prompts', upload.single('media'), (req, res) => {
+app.post('/api/prompts', (req, res) => {
   console.log('POST /api/prompts requested');
-  const { prompt_text, response_text } = req.body;
-  const file = req.file;
-
-  if (!prompt_text) {
-      return res.status(400).json({ error: 'Missing prompt_text' });
-  }
-
-  let media_url = "";
-  let media_type = "text";
-
-  if (file) {
-    const host = req.get('host');
-    const finalProtocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
-    media_url = `${finalProtocol}://${host}/uploads/${file.filename}`;
-    
-    if (file.mimetype.startsWith('image/')) {
-      media_type = 'image';
-    } else if (file.mimetype.startsWith('video/')) {
-      media_type = 'video';
-    } else if (file.mimetype.startsWith('audio/')) {
-      media_type = 'audio';
+  
+  upload.single('media')(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer Error:', err.message);
+      return res.status(400).json({ error: 'File upload error', details: err.message });
+    } else if (err) {
+      console.error('Unknown Upload Error:', err.message);
+      return res.status(500).json({ error: 'Upload failed', details: err.message });
     }
-  }
 
-  const sql = 'INSERT INTO prompts (prompt_text, response_text, media_url, media_type) VALUES (?, ?, ?, ?)';
-  const params = [prompt_text, response_text || "", media_url, media_type];
+    const { prompt_text, response_text } = req.body;
+    const file = req.file;
 
-  db.run(sql, params, function(err) {
-    if (err) {
-      console.error('DB Error (POST):', err.message);
-      res.status(500).json({ error: 'Database insertion failed', details: err.message });
-      return;
+    if (!prompt_text) {
+        return res.status(400).json({ error: 'Missing prompt_text (Received: ' + JSON.stringify(req.body) + ')' });
     }
-    res.json({
-      id: this.lastID,
-      prompt_text,
-      response_text,
-      media_url,
-      media_type
+
+    let media_url = "";
+    let media_type = "text";
+
+    if (file) {
+      const host = req.get('host');
+      const finalProtocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+      media_url = `${finalProtocol}://${host}/uploads/${file.filename}`;
+      
+      if (file.mimetype.startsWith('image/')) {
+        media_type = 'image';
+      } else if (file.mimetype.startsWith('video/')) {
+        media_type = 'video';
+      } else if (file.mimetype.startsWith('audio/')) {
+        media_type = 'audio';
+      }
+    }
+
+    const sql = 'INSERT INTO prompts (prompt_text, response_text, media_url, media_type) VALUES (?, ?, ?, ?)';
+    const params = [prompt_text, response_text || "", media_url, media_type];
+
+    db.run(sql, params, function(err) {
+      if (err) {
+        console.error('DB Error (POST):', err.message);
+        return res.status(500).json({ error: 'Database insertion failed', details: err.message });
+      }
+      res.json({
+        id: this.lastID,
+        prompt_text,
+        response_text,
+        media_url,
+        media_type
+      });
     });
+  });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Global Error Handler:', err.stack);
+  res.status(500).json({ 
+    error: 'Internal Server Error', 
+    details: err.message,
+    stack: process.env.NODE_ENV === 'production' ? '🥞' : err.stack 
   });
 });
 
