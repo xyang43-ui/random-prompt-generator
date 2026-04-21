@@ -47,9 +47,11 @@ app.use('/uploads', express.static(uploadsDir));
 
 // Database Setup
 const dbPath = path.join(dbDir, 'database.sqlite');
+console.log('Database path:', dbPath);
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('Error opening database', err.message);
+    console.error('CRITICAL: Error opening database', err.message);
   } else {
     console.log('Connected to the SQLite database at:', dbPath);
     db.run(`CREATE TABLE IF NOT EXISTS prompts (
@@ -60,7 +62,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
       media_type TEXT NOT NULL
     )`, (err) => {
       if (err) {
-        console.error('Error creating table', err.message);
+        console.error('CRITICAL: Error creating table', err.message);
+      } else {
+        console.log('Database table verified/created.');
       }
     });
   }
@@ -68,6 +72,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    }
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
@@ -80,9 +87,11 @@ const upload = multer({ storage: storage });
 
 // Routes
 app.get('/api/prompts', (req, res) => {
+  console.log('GET /api/prompts requested');
   db.all('SELECT * FROM prompts ORDER BY id DESC', [], (err, rows) => {    
     if (err) {
-      res.status(500).json({ error: err.message });
+      console.error('DB Error (GET):', err.message);
+      res.status(500).json({ error: 'Database error', details: err.message });
       return;
     }
     res.json(rows);
@@ -90,16 +99,20 @@ app.get('/api/prompts', (req, res) => {
 });
 
 app.post('/api/prompts', upload.single('media'), (req, res) => {
+  console.log('POST /api/prompts requested');
   const { prompt_text, response_text } = req.body;
   const file = req.file;
+
+  if (!prompt_text) {
+      return res.status(400).json({ error: 'Missing prompt_text' });
+  }
 
   let media_url = "";
   let media_type = "text";
 
   if (file) {
-    const protocol = req.protocol;
     const host = req.get('host');
-    const finalProtocol = process.env.NODE_ENV === 'production' ? 'https' : protocol;
+    const finalProtocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
     media_url = `${finalProtocol}://${host}/uploads/${file.filename}`;
     
     if (file.mimetype.startsWith('image/')) {
@@ -116,7 +129,8 @@ app.post('/api/prompts', upload.single('media'), (req, res) => {
 
   db.run(sql, params, function(err) {
     if (err) {
-      res.status(500).json({ error: err.message });
+      console.error('DB Error (POST):', err.message);
+      res.status(500).json({ error: 'Database insertion failed', details: err.message });
       return;
     }
     res.json({
