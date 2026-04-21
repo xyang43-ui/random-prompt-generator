@@ -175,11 +175,12 @@ const UploadModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({
             />
           </div>
           <div className="form-group">
-            <label>MEDIA FILE</label>
+            <label>MEDIA FILE (IMAGE/VIDEO/AUDIO)</label>
             <input 
               type="file" 
               accept="image/*,video/*,audio/*" 
               onChange={(e) => setFile(e.target.files?.[0] || null)} 
+              placeholder="Select file"
             />
           </div>
           <div className="form-actions">
