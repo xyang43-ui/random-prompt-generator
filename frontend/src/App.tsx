@@ -333,20 +333,65 @@ function App() {
     if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
   };
 
-  const handleTrackChange = (track: string | null) => {
-    initAudio(); if (!track) { audioRef.current?.pause(); setIsPlaying(false); setCurrentTrack(null); return; }
-    setCurrentTrack(track); setIsPlaying(true); setTimeout(() => { if (audioRef.current) audioRef.current.play(); }, 0);
+  const handleTrackChange = useCallback((track: string | null) => {
+    initAudio(); 
+    if (!track) { 
+      audioRef.current?.pause(); 
+      setIsPlaying(false); 
+      setCurrentTrack(null); 
+      return; 
+    }
+    setCurrentTrack(track); 
+    setIsPlaying(true); 
+    // Use a small timeout to ensure the src is updated before playing
+    setTimeout(() => { 
+      if (audioRef.current) {
+        audioRef.current.play().catch(e => console.log("Auto-play blocked, waiting for interaction"));
+      }
+    }, 0);
+  }, []);
+
+  const playRandomTrack = useCallback(() => {
+    const randomTrack = BGM_FILES[Math.floor(Math.random() * BGM_FILES.length)];
+    handleTrackChange(randomTrack);
+  }, [handleTrackChange]);
+
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+    } else {
+      if (!currentTrack) {
+        playRandomTrack();
+      } else {
+        audioRef.current?.play();
+        setIsPlaying(true);
+      }
+    }
   };
 
   const generateRandomPrompt = useCallback(() => {
     const v = VERBS[Math.floor(Math.random() * VERBS.length)]; const nObj = NOUNS[Math.floor(Math.random() * NOUNS.length)];
     const plural = Math.random() > 0.5; setVerb(v); setIsPlural(plural); setVerbFont(FONTS[Math.floor(Math.random() * FONTS.length)]); setArticleFont(FONTS[Math.floor(Math.random() * FONTS.length)]); setNounFont(FONTS[Math.floor(Math.random() * FONTS.length)]);
     if (plural) setNoun(nObj.p); else { setNoun(nObj.s); setArticle(['a','e','i','o','u'].includes(nObj.s[0].toLowerCase()) ? 'an' : 'a'); }
-  }, []);
+    
+    // Auto switch to another random track on prompt change
+    playRandomTrack();
+  }, [playRandomTrack]);
 
   const generateAboutPrompt = useCallback(() => {
     setAboutPromptIndex(prev => (prev + 1) % ABOUT_FONTS.length);
-  }, []);
+    playRandomTrack();
+  }, [playRandomTrack]);
+
+  // Initial random track on mount (or first interaction)
+  useEffect(() => {
+    if (view === "home" && !currentTrack) {
+      const randomTrack = BGM_FILES[Math.floor(Math.random() * BGM_FILES.length)];
+      setCurrentTrack(randomTrack);
+    }
+  }, [view, currentTrack]);
 
   useEffect(() => {
     let interval: number | undefined;
@@ -376,23 +421,10 @@ function App() {
       <div className="vignette"></div>
       <div className="top-nav">
         {view === "home" && (
-          <div className="mini-audio-controls">
-            <button className="track-btn" onClick={(e) => { e.stopPropagation(); const idx = currentTrack ? BGM_FILES.indexOf(currentTrack) : 0; handleTrackChange(BGM_FILES[(idx - 1 + BGM_FILES.length) % BGM_FILES.length]); }}>‹</button>
+          <div className="mini-audio-controls" onClick={toggleMute} style={{ borderRight: 'none', cursor: 'pointer' }}>
             <Visualizer analyzer={analyzerRef.current} isPlaying={isPlaying} />
-            <button className="track-btn" onClick={(e) => { e.stopPropagation(); const idx = currentTrack ? BGM_FILES.indexOf(currentTrack) : -1; handleTrackChange(BGM_FILES[(idx + 1) % BGM_FILES.length]); }}>›</button>
           </div>
         )}
-        <button className="music-toggle-btn" onClick={(e) => { e.stopPropagation(); setIsMusicPanelOpen(!isMusicPanelOpen); }}>MUSIC</button>
-      </div>
-      <div className={`music-panel ${isMusicPanelOpen ? 'open' : ''}`}>
-        <div className="music-panel-content">
-          <header><h3>BGM SELECT</h3><button className="close-panel-btn" onClick={() => setIsMusicPanelOpen(false)}>×</button></header>
-          <div className="volume-control"><span>VOLUME</span><input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} /></div>
-          <ul className="track-list">
-            <li className={currentTrack === null ? 'active' : ''} onClick={() => handleTrackChange(null)}>MUTE / OFF</li>
-            {BGM_FILES.map(file => (<li key={file} className={currentTrack === file ? 'active' : ''} onClick={() => handleTrackChange(file)}>{file.replace('.mp3', '').replace(/-/g, ' ')}</li>))}
-          </ul>
-        </div>
       </div>
       <main className="main-content">
         {view === "home" && (
