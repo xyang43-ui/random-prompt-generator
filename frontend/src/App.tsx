@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 // --- 数据定义 ---
@@ -44,6 +45,138 @@ const BGM_FILES = [
 ];
 
 const API_BASE_URL = "https://random-prompt-generator-production.up.railway.app";
+
+const IMAGE_FILES = [
+  "alive_1.png", "alive_2.png", "alive_3.png", "alive_4.png", "alive_5.png",
+  "alive_6.png", "alive_7.png", "alive_8.png", "alive_9.png", "alive_10.png",
+  "alive_11.png", "alive_12.png", "alive_13.png", "alive_14.png", "alive_15.png",
+  "dead_1.png", "dead_2.png", "dead_3.png", "dead_4.png", "dead_5.png"
+];
+
+const RandomImageBackground: React.FC<{ trigger: number }> = ({ trigger }) => {
+  const [images, setImages] = useState<any[]>([]);
+
+  useEffect(() => {
+    const gridCols = 6;
+    const gridRows = 4;
+    const cells: { r: number; c: number }[] = [];
+    for (let r = 0; r < gridRows; r++) {
+      for (let c = 0; c < gridCols; c++) {
+        cells.push({ r, c });
+      }
+    }
+
+    // Shuffle cells and pick a subset
+    const shuffledCells = cells.sort(() => Math.random() - 0.5);
+    const count = Math.floor(Math.random() * 8) + 12; // 12 to 20 images to keep it clean
+    const selectedCells = shuffledCells.slice(0, count);
+
+    const newImages = selectedCells.map((cell, i) => {
+      const src = `/image/cat/${IMAGE_FILES[Math.floor(Math.random() * IMAGE_FILES.length)]}`;
+      
+      // Control size: base size + small variation
+      const size = Math.floor(Math.random() * 40) + 100; // 100px to 140px (consistent but varied)
+      
+      // Position within the grid cell with some jitter to avoid perfect grid look
+      const jitterX = (Math.random() - 0.5) * 10; // +/- 5%
+      const jitterY = (Math.random() - 0.5) * 15; // +/- 7.5%
+      
+      const left = (cell.c / gridCols) * 100 + (100 / gridCols / 2) + jitterX;
+      const top = (cell.r / gridRows) * 100 + (100 / gridRows / 2) + jitterY;
+      
+      const rotation = (Math.random() - 0.5) * 45; // +/- 22.5 degrees for subtle rotation
+      return { id: i, src, size, top, left, rotation };
+    });
+    setImages(newImages);
+  }, [trigger]);
+
+  return (
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none', overflow: 'hidden' }}>
+      {images.map(img => (
+        <img 
+          key={img.id} 
+          src={img.src} 
+          alt="" 
+          style={{ 
+            position: 'absolute', 
+            top: `${img.top}%`, 
+            left: `${img.left}%`, 
+            width: `${img.size}px`, 
+            transform: `translate(-50%, -50%) rotate(${img.rotation}deg)`,
+            opacity: 0.8,
+            transition: 'all 0.5s ease-out'
+          }} 
+        />
+      ))}
+    </div>
+  );
+};
+
+const ShufflingText: React.FC = () => {
+  const originalText = "Schrödinger's cat highlights the fundamental RANDOMNESS of quantum mechanics by linking a cat's survival to a single radioactive atom's decay. According to the Copenhagen interpretation, the atom exists in a superposition of decayed and not decayed states, causing the cat to be both alive and dead until the box is opened, forcing a random outcome.";
+  
+  const [tokens, setTokens] = useState<{ id: string, text: string }[]>([]);
+
+  useEffect(() => {
+    // Unicode-aware split: punctuation and words (including accented characters like ö) as tokens
+    // \p{L} matches any letter from any language
+    const initialTokens = (originalText.match(/\p{L}+|[^\s\p{L}]/gu) || []).map((text, i) => ({
+      id: `${text}-${i}`,
+      text
+    }));
+    setTokens(initialTokens);
+
+    const interval = setInterval(() => {
+      setTokens(prev => [...prev].sort(() => Math.random() - 0.5));
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="shuffling-text-container" style={{ 
+      fontFamily: "'Futura', sans-serif", 
+      maxWidth: '800px', 
+      textAlign: 'center', 
+      fontSize: '1.2rem', 
+      lineHeight: '1.8',
+      letterSpacing: '0.05em',
+      textTransform: 'none',
+      color: '#000',
+      padding: '40px',
+      display: 'flex',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: '8px'
+    }}>
+      <AnimatePresence mode="popLayout">
+        {tokens.map((token) => (
+          <motion.span 
+            key={token.id}
+            layout
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ 
+              type: "spring",
+              stiffness: 150,
+              damping: 20,
+              mass: 1,
+              opacity: { duration: 0.4 }
+            }}
+            style={{ 
+              display: 'inline-block', 
+              fontWeight: token.text === "RANDOMNESS" ? '900' : '300',
+              cursor: 'default'
+            }}
+          >
+            {token.text}
+          </motion.span>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const Visualizer: React.FC<{ analyzer: AnalyserNode | null, isPlaying: boolean }> = ({ analyzer, isPlaying }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -222,6 +355,233 @@ const UploadModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({
   );
 };
 
+const STATIC_PROMPTS: Prompt[] = [
+  {
+    id: -1,
+    prompt_text: "translate silence",
+    response_text: `.      .           .   .        .
+
+        ,,,,
+   ,           ,,
+          ,,,        ,,
+
+?     ?          ?      ?
+
+      . . . . . . . . . . . .
+
+!   !    !        !
+
+          ,       ,      ,
+
+...   ...        ...     ...
+
+?        !     ?      !      ?
+
+           .  .   .      .
+
+...`,
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -2,
+    prompt_text: "translate silence",
+    response_text: `doors open
+no one steps in
+air still
+pages unmoving
+no footsteps
+fluorescent hum steady
+no one speaks
+chairs untouched
+clock hand pauses between ticks
+breath held
+nothing changes`,
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -3,
+    prompt_text: "explain randomness",
+    response_text: `00:00 
+drawing a circle
+00:47 alarm
+stretching
+01:15 alarm
+writing one sentence
+02:03 alarm
+drinking water
+02:41 alarm
+staring out the window
+03:12 alarm
+tapping the table
+04:26 alarm
+checking the clock
+05:10 alarm
+walking three steps
+05:52 alarm
+stop and record the sequence`,
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -4,
+    prompt_text: "explain randomness",
+    response_text: `//// / ///
+
+/     /        ////
+///
+/
+/////       //
+
+///
+//
+/
+////`,
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -5,
+    prompt_text: "explain randomness",
+    response_text: `keychain → receipt → headphone case
+
+A keychain, followed by a paper of a recent decision, ending in a closed container.`,
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -6,
+    prompt_text: "explain randomness",
+    response_text: `cap red wood`,
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -7,
+    prompt_text: "explain randomness",
+    response_text: `Jgioeu4aowihfg9svuiha784h092jfoia mu98etu ajwp[p98weu9auohgj
+Ajt9wge8hjopa’
+G aiutjgioar gjpa’’a
+ J9rg jap’jg aiuajiowghap’ga
+ jeij;`,
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -8,
+    prompt_text: "explain randomness",
+    response_text: "",
+    media_url: "/image/randomness_01.jpg",
+    media_type: "image"
+  },
+  {
+    id: -9,
+    prompt_text: "explain randomness",
+    response_text: "",
+    media_url: "/image/raindrop.jpg",
+    media_type: "image"
+  },
+  {
+    id: -10,
+    prompt_text: "explain randomness",
+    response_text: "",
+    media_url: "/image/randomness_02.jpg",
+    media_type: "image"
+  },
+  {
+    id: -11,
+    prompt_text: "explain randomness",
+    response_text: "",
+    media_url: "/image/water drop.jpg",
+    media_type: "image"
+  },
+  {
+    id: -12,
+    prompt_text: "explain randomness",
+    response_text: "",
+    media_url: "/video/randomness_01.mp4",
+    media_type: "video"
+  },
+  {
+    id: -13,
+    prompt_text: "explain randomness",
+    response_text: "",
+    media_url: "/video/randomness_02.mp4",
+    media_type: "video"
+  },
+  {
+    id: -14,
+    prompt_text: "explain randomness",
+    response_text: "",
+    media_url: "/video/randomness_03.mp4",
+    media_type: "video"
+  },
+  {
+    id: -15,
+    prompt_text: "randomness in nature",
+    response_text: "",
+    media_url: "/image/randomness_03.jpg",
+    media_type: "image"
+  },
+  {
+    id: -16,
+    prompt_text: "randomness in nature",
+    response_text: "",
+    media_url: "/image/randomness_04.jpg",
+    media_type: "image"
+  },
+  {
+    id: -17,
+    prompt_text: "randomness in nature",
+    response_text: "",
+    media_url: "/image/randomness_05.jpg",
+    media_type: "image"
+  },
+  {
+    id: -18,
+    prompt_text: "explain randomness",
+    response_text: "",
+    media_url: "/video/randomness_04.mp4",
+    media_type: "video"
+  },
+  {
+    id: -19,
+    prompt_text: "layer a wave",
+    response_text: "1+1=?",
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -20,
+    prompt_text: "paste masses",
+    response_text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+    media_url: "",
+    media_type: "text"
+  },
+  {
+    id: -21,
+    prompt_text: "rotate a spectrum",
+    response_text: "Turn my phone screen face down",
+    media_url: "/image/rotate a spectrum.png",
+    media_type: "image"
+  },
+  {
+    id: -22,
+    prompt_text: "invert a spectrum",
+    response_text: "Sadness  → Anxiety  → Calm  → Happiness",
+    media_url: "/image/invert a spectrum.png",
+    media_type: "image"
+  },
+  {
+    id: -23,
+    prompt_text: "bridge the depth",
+    response_text: "",
+    media_url: "/image/bridge the depth.png",
+    media_type: "image"
+  }
+];
+
 const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
@@ -231,6 +591,7 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/prompts`);
       const data = await response.json();
+      // Filter out any data that might conflict with static IDs if necessary
       setPrompts(data);
     } catch (err) {
       console.error("Failed to fetch prompts:", err);
@@ -241,7 +602,10 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     fetchPrompts();
   }, [fetchPrompts]);
 
+  const allPrompts = useMemo(() => [...STATIC_PROMPTS, ...prompts], [prompts]);
+
   const handleDelete = async (id: number) => {
+    if (id < 0) return; // Prevent deleting static prompts
     if (!window.confirm("Are you sure you want to delete this prompt?")) return;
     try {
       const response = await fetch(`${API_BASE_URL}/api/prompts/${id}`, {
@@ -261,16 +625,11 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   return (
     <div className="sub-archive-view archive-floating-container">
-      <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px', margin: 0 }} onClick={onBack}>BACK TO HOME</button>
       <button className="upload-btn-trigger" onClick={() => setIsUploadOpen(true)}>UPLOAD</button>
       
-      {prompts.length === 0 ? (
-        <FloatingPrompt text="explain randomness" onClick={() => setSelectedPrompt({ id: 0, prompt_text: "explain randomness", media_url: "", media_type: "placeholder" })} />
-      ) : (
-        prompts.map(p => (
-          <FloatingPrompt key={p.id} text={p.prompt_text} onClick={() => setSelectedPrompt(p)} />
-        ))
-      )}
+      {allPrompts.map(p => (
+        <FloatingPrompt key={p.id} text={p.prompt_text} onClick={() => setSelectedPrompt(p)} />
+      ))}
 
       {selectedPrompt && (
         <div className="modal-overlay" onClick={() => setSelectedPrompt(null)}>
@@ -278,10 +637,10 @@ const ArchiveFloatingView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <div className="modal-prompt-title">{selectedPrompt.prompt_text}</div>
             
             {selectedPrompt.response_text && (
-              <div className="modal-response-text">{selectedPrompt.response_text}</div>
+              <div className="modal-response-text" style={{ whiteSpace: 'pre-wrap', textAlign: 'left', fontFamily: "'Space Mono', monospace" }}>{selectedPrompt.response_text}</div>
             )}
 
-            {selectedPrompt.media_type !== 'text' && (
+            {selectedPrompt.media_type !== 'text' && selectedPrompt.media_url && (
               <div className="modal-media-container">
                 {selectedPrompt.media_type === 'image' && <img src={selectedPrompt.media_url} alt={selectedPrompt.prompt_text} className="modal-media" />}
                 {selectedPrompt.media_type === 'video' && <video src={selectedPrompt.media_url} controls className="modal-media" />}
@@ -326,12 +685,14 @@ const CustomCursor: React.FC<{ mousePos: { x: number, y: number }, isHolding: bo
     <div 
       className={`custom-cursor ${isHolding ? 'is-holding' : ''}`} 
       style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px` }}
-    />
+    >
+      <img src="/image/Untitled-1.gif" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+    </div>
   );
 };
 
 function App() {
-  type ViewState = "home" | "archive" | "archive_random" | "archive_about" | "archive_nature";
+  type ViewState = "home" | "archive" | "archive_random" | "archive_about" | "archive_nature" | "generator";
   const [view, setView] = useState<ViewState>("home");
   const [verb, setVerb] = useState("click &"); const [article, setArticle] = useState(""); const [noun, setNoun] = useState("hold");
   const [isPlural, setIsPlural] = useState(true); const [verbFont, setVerbFont] = useState(FONTS[0]); const [articleFont, setArticleFont] = useState(FONTS[0]); const [nounFont, setNounFont] = useState(FONTS[0]);
@@ -341,6 +702,7 @@ function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null); const audioCtxRef = useRef<AudioContext | null>(null); const analyzerRef = useRef<AnalyserNode | null>(null);
 
   const [aboutPromptIndex, setAboutPromptIndex] = useState(0);
+  const [promptCount, setPromptCount] = useState(0);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -412,6 +774,7 @@ function App() {
     
     // Auto switch to another random track on prompt change
     playRandomTrack();
+    setPromptCount(prev => prev + 1);
   }, [playRandomTrack]);
 
   const generateAboutPrompt = useCallback(() => {
@@ -430,11 +793,11 @@ function App() {
   useEffect(() => {
     let interval: number | undefined;
     if (isHolding) {
-      if (view === "home" || view === "archive_about") {
+      if (view === "generator" || view === "archive_about") {
         interval = window.setInterval(() => {
           setProgress((prev: number) => { 
             if (prev >= 100) { 
-              if (view === "home") generateRandomPrompt();
+              if (view === "generator") generateRandomPrompt();
               else generateAboutPrompt();
               setIsHolding(false); 
               return 0; 
@@ -453,7 +816,7 @@ function App() {
         className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} 
         onMouseDown={(e) => { 
           setMousePos({ x: e.clientX, y: e.clientY }); 
-          if(view==="home" || view==="archive_about") setIsHolding(true); 
+          if(view==="generator" || view==="archive_about") setIsHolding(true); 
           initAudio(); 
         }} 
         onMouseUp={() => setIsHolding(false)} 
@@ -461,17 +824,17 @@ function App() {
         onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} 
         onTouchStart={(e) => { 
           setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); 
-          if(view==="home" || view==="archive_about") setIsHolding(true); 
+          if(view==="generator" || view==="archive_about") setIsHolding(true); 
           initAudio(); 
         }} 
         onTouchEnd={() => setIsHolding(false)} 
         onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}
       >
         <audio ref={audioRef} src={currentTrack ? `/bgm/${currentTrack}` : undefined} loop />
+        <RandomImageBackground trigger={promptCount} />
         <InteractiveBackground isHolding={isHolding} progress={progress} mousePos={mousePos} />
-        <div className="vignette"></div>
         <div className="top-nav">
-          {view === "home" && (
+          {(view === "home" || view === "generator") && (
             <div className="mini-audio-controls" onClick={toggleMute} style={{ borderRight: 'none', cursor: 'pointer' }}>
               <Visualizer analyzer={analyzerRef.current} isPlaying={isPlaying} />
             </div>
@@ -479,6 +842,9 @@ function App() {
         </div>
         <main className="main-content">
           {view === "home" && (
+            <ShufflingText />
+          )}
+          {view === "generator" && (
             <div className="prompt-wrapper">
               <h1 className={`prompt-display ${isHolding ? 'holding' : ''} ${isPlural ? 'plural' : 'singular'}`}>
                 <InteractiveLine text={verb} font={verbFont} mousePos={mousePos} isHolding={isHolding} progress={progress} />
@@ -497,8 +863,7 @@ function App() {
           <ArchiveFloatingView onBack={() => setView('archive')} />
         )}
         {view === "archive_about" && (
-          <div className="sub-archive-view about-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 998 }}>
-            <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px' }} onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
+          <div className="sub-archive-view about-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'transparent', zIndex: 998 }}>
             <div className="prompt-wrapper" style={{ marginTop: '50vh', transform: 'translateY(-50%)' }}>
               <h1 className={`prompt-display ${isHolding ? 'holding' : ''}`}>
                 <InteractiveLine text="explain randomness" font={ABOUT_FONTS[aboutPromptIndex]} mousePos={mousePos} isHolding={isHolding} progress={progress} />
@@ -507,26 +872,35 @@ function App() {
           </div>
         )}
         {view === "archive_nature" && (
-          <div className="sub-archive-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 998 }}>
-            <button className="back-btn" style={{ position: 'absolute', top: '40px', left: '40px' }} onClick={() => setView('archive')}>BACK TO ARCHIVE</button>
+          <div className="sub-archive-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'transparent', zIndex: 998 }}>
             <h2 className="placeholder-title">NATURE</h2>
           </div>
         )}
+        {view === "generator" && (
+          <div className="sub-generator-view" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'transparent', zIndex: 998 }}>
+            {/* The content is rendered inside main.main-content for alignment */}
+          </div>
+        )}
         <div className="ui-overlay">
-          {(view === "home" || view === "archive_about") && (
+          {(view === "generator" || view === "archive_about") && (
             <div className="progress-bar-container">
               <div className="progress-bar" style={{ width: `${progress}%` }}></div>
             </div>
           )}
           <div className="footer-info">
             <nav className="nav-links">
-              <button className={`nav-btn ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>HOME</button>
+              <div className="nav-group">
+                <button className={`nav-btn ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>HOME</button>
+                <div className="nav-sub-links">
+                  <button className={`nav-btn sub ${view === 'generator' ? 'active' : ''}`} onClick={() => setView('generator')}>GENERATOR</button>
+                </div>
+              </div>
               <span className="nav-separator">/</span>
               <button className={`nav-btn ${view.startsWith('archive') ? 'active' : ''}`} onClick={() => setView('archive')}>ARCHIVE</button>
             </nav>
             <div className="footer-right">
-              <span>RANDOM PROMPT GENERATOR</span>
-              {(view === "home" || view === "archive_about") && (
+              <span>SCHRÖDINGER'S CAT</span>
+              {(view === "generator" || view === "archive_about") && (
                 <div className="hold-hint-group"><span>HOLD TO GENERATE</span></div>
               )}
             </div>
