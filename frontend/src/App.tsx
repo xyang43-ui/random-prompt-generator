@@ -694,9 +694,11 @@ const CustomCursor: React.FC<{ mousePos: { x: number, y: number }, isHolding: bo
 function App() {
   type ViewState = "home" | "archive" | "archive_random" | "archive_about" | "archive_nature" | "generator";
   const [view, setView] = useState<ViewState>("home");
+  const [homeScrollProgress, setHomeScrollProgress] = useState(0);
   const [verb, setVerb] = useState("click &"); const [article, setArticle] = useState(""); const [noun, setNoun] = useState("hold");
   const [isPlural, setIsPlural] = useState(true); const [verbFont, setVerbFont] = useState(FONTS[0]); const [articleFont, setArticleFont] = useState(FONTS[0]); const [nounFont, setNounFont] = useState(FONTS[0]);
   const [isHolding, setIsHolding] = useState(false); const [progress, setProgress] = useState(0); const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [touchStartY, setTouchStartY] = useState(0);
   const [isMusicPanelOpen, setIsMusicPanelOpen] = useState(false); const [currentTrack, setCurrentTrack] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.5); const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null); const audioCtxRef = useRef<AudioContext | null>(null); const analyzerRef = useRef<AnalyserNode | null>(null);
@@ -814,6 +816,14 @@ function App() {
     <>
       <div 
         className={`app-container ${view} ${isHolding ? 'is-holding' : ''}`} 
+        onWheel={(e) => {
+          if (view === "home") {
+            setHomeScrollProgress(prev => {
+              const next = prev + (e.deltaY * 0.05);
+              return Math.min(Math.max(next, 0), 100);
+            });
+          }
+        }}
         onMouseDown={(e) => { 
           setMousePos({ x: e.clientX, y: e.clientY }); 
           if(view==="generator" || view==="archive_about") setIsHolding(true); 
@@ -824,11 +834,22 @@ function App() {
         onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} 
         onTouchStart={(e) => { 
           setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY }); 
+          setTouchStartY(e.touches[0].clientY);
           if(view==="generator" || view==="archive_about") setIsHolding(true); 
           initAudio(); 
         }} 
         onTouchEnd={() => setIsHolding(false)} 
-        onTouchMove={(e) => setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY })}
+        onTouchMove={(e) => {
+          setMousePos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+          if (view === "home") {
+            const deltaY = touchStartY - e.touches[0].clientY;
+            setHomeScrollProgress(prev => {
+              const next = prev + (deltaY * 0.1);
+              return Math.min(Math.max(next, 0), 100);
+            });
+            setTouchStartY(e.touches[0].clientY);
+          }
+        }}
       >
         <audio ref={audioRef} src={currentTrack ? `/bgm/${currentTrack}` : undefined} loop />
         <RandomImageBackground trigger={promptCount} />
@@ -842,7 +863,54 @@ function App() {
         </div>
         <main className="main-content">
           {view === "home" && (
-            <ShufflingText />
+            <div className="home-sections-wrapper">
+              <motion.div 
+                className="home-section"
+                style={{ 
+                  y: `-${homeScrollProgress * 0.5}%`,
+                  opacity: 1 - homeScrollProgress / 80,
+                  pointerEvents: homeScrollProgress > 80 ? 'none' : 'all'
+                }}
+              >
+                <ShufflingText />
+              </motion.div>
+              <motion.div 
+                className="home-section"
+                style={{ 
+                  y: `${(100 - homeScrollProgress) * 0.8}%`,
+                  opacity: (homeScrollProgress - 20) / 60,
+                  pointerEvents: homeScrollProgress < 20 ? 'none' : 'all'
+                }}
+              >
+                <div className="intro-sequence">
+                  {[
+                    <>GO TO GENERATOR.<br />HOLD AND GENERATE RANDOM PROMPT.</>,
+                    <>Let random music guide you.<br />encounter unpredictable prompts.<br />follow accidental inspirations.<br />and record whatever responses emerge in the moment.</>,
+                    <>GO TO ARCHIVE.<br />UPLOAD AND SHARE YOUR RANDOM OUTPUTS.</>,
+                    "BE FREE. BE RANDOM."
+                  ].map((text, i) => {
+                    // Stagger the appearance of each box based on progress
+                    // Each box gets a 15% window within the 40-100 range
+                    const startAt = 40 + i * 15;
+                    const boxProgress = Math.min(Math.max((homeScrollProgress - startAt) / 15, 0), 1);
+                    
+                    return (
+                      <motion.div 
+                        key={i}
+                        className={`intro-box ${i === 3 ? 'highlight' : ''}`}
+                        style={{
+                          opacity: boxProgress,
+                          y: 20 * (1 - boxProgress),
+                          scale: 0.95 + (0.05 * boxProgress)
+                        }}
+                      >
+                        {text}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </div>
           )}
           {view === "generator" && (
             <div className="prompt-wrapper">
@@ -882,6 +950,11 @@ function App() {
           </div>
         )}
         <div className="ui-overlay">
+          {view === "home" && (
+            <div className="home-scroll-progress-container">
+              <div className="home-scroll-progress-bar" style={{ height: `${homeScrollProgress}%` }}></div>
+            </div>
+          )}
           {(view === "generator" || view === "archive_about") && (
             <div className="progress-bar-container">
               <div className="progress-bar" style={{ width: `${progress}%` }}></div>
